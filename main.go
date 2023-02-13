@@ -1,9 +1,13 @@
 package main
 
 import (
+	"encoding/json"
 	"net/http"
 
-	"github.com/gin-gonic/gin"
+	// "encoding/json"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 )
 
 type user struct {
@@ -18,26 +22,45 @@ var users = []user{
 }
 
 func main() {
-	router := gin.Default()
-	router.POST("/user", postUser)
-	router.GET("/users", getUsers)
+	r := chi.NewRouter()
+	r.Use(middleware.Logger)
 
-	router.Run("localhost:8000")
+	r.Get("/users", getUsers)
+	// r.Get("/user/:id", getUser)
+	// r.Post("/user", postUser)
+
+	http.ListenAndServe(":8000", r)
 }
 
-func getUsers(c *gin.Context) {
-	c.IndentedJSON(http.StatusOK, users)
-}
-
-func postUser(c *gin.Context) {
-	var newUser user
-
-	// Bind received JSON to newUser.
-	if err := c.BindJSON(&newUser); err != nil {
-		return
+func getUsers(w http.ResponseWriter, r *http.Request) {
+	if _, err := json.Marshal(&users); err == nil {
+		// w.Write(res)
+		w.Write([]byte("This works?"))
 	}
-
-	// Add newUser to users.
-	users = append(users, newUser)
-	c.IndentedJSON(http.StatusCreated, newUser)
+	panic("Get user request failed!")
 }
+
+// func getUser(w http.ResponseWriter, r *http.Request) {
+// 	id := c.Param("id")
+
+// 	for _, user := range users {
+// 		if user.ID == id {
+// 			c.IndentedJSON(http.StatusOK, user)
+// 			return
+// 		}
+// 	}
+// 	c.IndentedJSON(http.StatusNotFound, {"message": "album not found"})
+// }
+
+// func postUser(w http.ResponseWriter, r *http.Request) {
+// 	var newUser user
+
+// 	// Bind received JSON to newUser.
+// 	if err := c.BindJSON(&newUser); err != nil {
+// 		return
+// 	}
+
+// 	// Add newUser to users.
+// 	users = append(users, newUser)
+// 	c.IndentedJSON(http.StatusCreated, newUser)
+// }
