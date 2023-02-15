@@ -29,15 +29,16 @@ func main() {
 	// r.Get("/user/:id", getUser)
 	// r.Post("/user", postUser)
 
-	http.ListenAndServe(":8000", r)
+	http.ListenAndServe("127.0.0.1:8000", r)
 }
 
 func getUsers(w http.ResponseWriter, r *http.Request) {
-	if _, err := json.Marshal(&users); err == nil {
-		// w.Write(res)
-		w.Write([]byte("This works?"))
+	if res, err := json.Marshal(&users); err == nil {
+		w.Write(res)
+		// w.Write([]byte("This works?"))
+	} else {
+		panic("Get user request failed!" + err.Error())
 	}
-	panic("Get user request failed!")
 }
 
 // func getUser(w http.ResponseWriter, r *http.Request) {
