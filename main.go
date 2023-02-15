@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -65,7 +66,7 @@ func postUser(w http.ResponseWriter, r *http.Request) {
 
 	// Bind received JSON to newUser.
 	if err := render.Bind(r, &newUser); err != nil {
-		render.Render(w, r, err)
+		panic("Invalid request")
 	}
 
 	// Add newUser to users.
@@ -73,6 +74,9 @@ func postUser(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(fmt.Sprintf("Post user %v successful!", &newUser.FirstName)))
 }
 
-type UserRequest struct {
-	*User
+func (u *User) Bind(r *http.Request) error {
+	if u == nil {
+		return errors.New("Missing user field")
+	}
+	return nil
 }
