@@ -27,8 +27,6 @@ type UserModel struct {
 var db *gorm.DB
 
 func main() {
-	os.Setenv("CGO_ENABLED", "1")
-
 	log.SetOutput(os.Stdout)
 	var err error
 	db, err = gorm.Open(sqlite.Open("test.db"), &gorm.Config{})

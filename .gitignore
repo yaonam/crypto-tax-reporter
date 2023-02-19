@@ -16,3 +16,6 @@
 
 # Databases
 *.db
+
+# csv stuff
+csv/
