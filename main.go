@@ -12,8 +12,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/render"
 
-	// "gorm.io/driver/sqlite"
-	"github.com/glebarez/sqlite" // Pure go, doesn't need cgo
+	"github.com/glebarez/sqlite" // Pure go driver, doesn't need cgo
 	"gorm.io/gorm"
 )
 
@@ -57,13 +56,14 @@ func main() {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 
+	r.Get("/", test)
 	r.Get("/users", getUsers)
 	r.Route("/user", func(r chi.Router) {
 		r.Post("/", postUser)
 		r.Get("/{userId}", getUser)
 	})
 
-	log.Println("Server started!")
+	log.Println("Server started")
 	http.ListenAndServe("127.0.0.1:8000", r)
 }
 
