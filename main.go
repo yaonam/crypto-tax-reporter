@@ -40,8 +40,8 @@ func main() {
 	os.Setenv("CGO_ENABLED", "1")
 
 	log.SetOutput(os.Stdout)
-	log.Println("got here")
-	db, err := gorm.Open(sqlite.Open("test.db"), &gorm.Config{})
+	var err error
+	db, err = gorm.Open(sqlite.Open("test.db"), &gorm.Config{})
 	if err != nil {
 		panic("failed to connect database")
 	}
@@ -49,8 +49,8 @@ func main() {
 	// Migrate the schema
 	db.AutoMigrate(&UserModel{})
 
-	// // Create
-	// db.Create(&UserModel{FirstName: "Elim", LastName: "Poon"})
+	// Create
+	db.Create(&UserModel{FirstName: "Elim", LastName: "Poon"})
 
 	// // Read
 	// var product UserModel
@@ -75,19 +75,21 @@ func main() {
 		r.Get("/{userId}", getUser)
 	})
 
+	log.Println("Server started!")
 	http.ListenAndServe("127.0.0.1:8000", r)
 }
 
 func getUsers(w http.ResponseWriter, r *http.Request) {
 	log.Println("got here")
-	// var users UserModel
-	// db.Find(&users)
-	// log.Println("got here")
-	// if res, err := json.Marshal(&users); err == nil {
-	// 	w.Write(res)
-	// } else {
-	// 	panic("Failed to jsonify users!" + err.Error())
-	// }
+	log.Println(db)
+	var users UserModel
+	db.Find(&users)
+	log.Println("got here")
+	if res, err := json.Marshal(&users); err == nil {
+		w.Write(res)
+	} else {
+		panic("Failed to jsonify users!" + err.Error())
+	}
 }
 
 func getUser(w http.ResponseWriter, r *http.Request) {

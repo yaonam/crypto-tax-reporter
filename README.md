@@ -10,6 +10,10 @@ Modules -> Packages -> Files
 
 `nodemon --watch './**/*.go' --signal SIGTERM --exec 'go' run main.go`
 
+For Windows:
+
+`nodemon --watch './**/*.go' --signal SIGKILL --exec 'go' run main.go`
+
 `go mod init {MODULE_NAME}` to create project dependency file
 `go get .` to automatically track dependencies (based on imports)
 `go run .` to run server
