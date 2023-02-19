@@ -17,21 +17,11 @@ import (
 	"gorm.io/gorm"
 )
 
-type User struct {
-	ID        string `json:"id"`
+type UserModel struct {
+	gorm.Model
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
 	Email     string `json:"email"`
-}
-
-type UserModel struct {
-	gorm.Model
-	FirstName string
-	LastName  string
-}
-
-var users = []User{
-	{ID: "1", FirstName: "Elim", LastName: "Poon", Email: "elimviolinist@gmail.com"},
 }
 
 var db *gorm.DB
@@ -49,8 +39,8 @@ func main() {
 	// Migrate the schema
 	db.AutoMigrate(&UserModel{})
 
-	// Create
-	db.Create(&UserModel{FirstName: "Elim", LastName: "Poon"})
+	// // Create
+	// db.Create(&UserModel{FirstName: "Elim", LastName: "Poon"})
 
 	// // Read
 	// var product UserModel
@@ -80,12 +70,10 @@ func main() {
 }
 
 func getUsers(w http.ResponseWriter, r *http.Request) {
-	log.Println("got here")
-	log.Println(db)
-	var users UserModel
+	var users []UserModel
 	db.Find(&users)
-	log.Println("got here")
 	if res, err := json.Marshal(&users); err == nil {
+		w.Header().Set("Content-Type", "application/json") // json header
 		w.Write(res)
 	} else {
 		panic("Failed to jsonify users!" + err.Error())
@@ -95,33 +83,32 @@ func getUsers(w http.ResponseWriter, r *http.Request) {
 func getUser(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "userId")
 
-	for _, user := range users {
-		if user.ID == id {
-			if res, err := json.Marshal(&user); err == nil {
-				w.Write(res)
-			} else {
-				panic("Get user request failed!" + err.Error())
-			}
-			return
-		}
+	var user UserModel
+	db.Find(&user, id)
+
+	if res, err := json.Marshal(&user); err == nil {
+		w.Header().Set("Content-Type", "application/json") // json header
+		w.Write(res)
+	} else {
+		panic("Get user request failed!" + err.Error())
 	}
-	w.Write([]byte("No users"))
 }
 
 func postUser(w http.ResponseWriter, r *http.Request) {
-	var newUser User
+	var newUser UserModel
 
 	// Bind received JSON to newUser.
 	if err := render.Bind(r, &newUser); err != nil {
 		panic("Invalid request")
 	}
 
-	// Add newUser to users.
-	users = append(users, newUser)
-	w.Write([]byte(fmt.Sprintf("Post user %v successful!", &newUser.FirstName)))
+	// Create
+	db.Create(&newUser)
+
+	w.Write([]byte(fmt.Sprintf("Post user %v %v successful!", newUser.ID, newUser.FirstName)))
 }
 
-func (u *User) Bind(r *http.Request) error {
+func (u *UserModel) Bind(r *http.Request) error {
 	if u == nil {
 		return errors.New("Missing user field")
 	}
