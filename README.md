@@ -2,7 +2,11 @@
 
 ## Overview
 
-A crypto tax reporting service built on Go and Gin.
+A crypto tax reporting service built on Go and Chi.
+
+Chi is used instead of the stdlib for middleware support?
+
+Gorm for object relational mapping.
 
 ## Notes
 
