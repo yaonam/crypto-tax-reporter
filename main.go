@@ -36,6 +36,8 @@ func main() {
 	// Migrate the schema
 	db.AutoMigrate(&UserModel{})
 
+	openFile()
+
 	// // Create
 	// db.Create(&UserModel{FirstName: "Elim", LastName: "Poon"})
 
@@ -56,7 +58,7 @@ func main() {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 
-	r.Get("/", test)
+	r.Get("/", func(w http.ResponseWriter, _ *http.Request) { w.Write([]byte("Welcome!")) })
 	r.Get("/users", getUsers)
 	r.Route("/user", func(r chi.Router) {
 		r.Post("/", postUser)
