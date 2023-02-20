@@ -47,11 +47,11 @@ func parseTxList(data [][]string) []Transaction {
 			// tx.Asset = line[2]
 			// tx.Quantity = parseFloatOrZero(line[3])
 			// tx.Currency = parseFloatOrZero(line[4])
-			tx.SpotPrice = parseFloatOrZero(line[5])
-			tx.Subtotal = parseFloatOrZero(line[6])
-			tx.Total = parseFloatOrZero(line[7])
-			tx.Fees = parseFloatOrZero(line[8])
-			tx.Notes = line[9]
+			// tx.SpotPrice = parseFloatOrZero(line[5])
+			// tx.Subtotal = parseFloatOrZero(line[6])
+			// tx.Total = parseFloatOrZero(line[7])
+			// tx.Fees = parseFloatOrZero(line[8])
+			// tx.Notes = line[9]
 
 			txList = append(txList, tx)
 		}

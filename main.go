@@ -16,6 +16,7 @@ var db *gorm.DB
 
 func main() {
 	log.SetOutput(os.Stdout)
+	os.Remove("test.db")
 	var err error
 	db, err = gorm.Open(sqlite.Open("test.db"), &gorm.Config{})
 	if err != nil {
@@ -40,6 +41,11 @@ func main() {
 	r.Route("/account", func(r chi.Router) {
 		r.Get("/", getAccounts)
 		r.Post("/", postAccount)
+		// r.Get("/{userId}", getUser)
+	})
+	r.Route("/transaction", func(r chi.Router) {
+		r.Get("/", getTransactions)
+		r.Post("/", postTransaction)
 		// r.Get("/{userId}", getUser)
 	})
 

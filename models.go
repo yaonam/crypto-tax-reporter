@@ -15,6 +15,9 @@ type Account struct {
 	UserID     uint   `json:"user_id"`
 	Type       string `json:"type"`
 	ExternalID string `json:"external_id"`
+
+	FromTxs []Transaction `gorm:"foreignKey:From" json:"-"`
+	ToTxs   []Transaction `gorm:"foreignKey:To" json:"-"`
 }
 
 type Asset struct {
@@ -25,19 +28,19 @@ type Asset struct {
 
 type Transaction struct {
 	gorm.Model
-	Timestamp string   `json:"timestamp"`
-	Type      string   `json:"type"`
-	From      Account  `json:"from" gorm:"many2many:from_account;ForeignKey:id;References:id"`
-	To        Account  `json:"to" gorm:"many2many:to_account;ForeignKey:id;References:id"`
-	Asset     Asset    `json:"asset" gorm:"ForeignKey:id;References:id"`
-	Quantity  float64  `json:"quantity"`
-	Currency  Asset    `json:"currency" gorm:"ForeignKey:id;References:id"`
-	SpotPrice float64  `json:"spot_price"`
-	Subtotal  float64  `json:"subtotal"`
-	Total     float64  `json:"total"`
-	Fees      float64  `json:"fees"`
-	TaxLots   []TaxLot `json:"tax_lots"`
-	Notes     string   `json:"notes"`
+	Timestamp string `json:"timestamp"`
+	Type      string `json:"type"`
+	From      uint   `json:"from"`
+	To        uint   `json:"to"`
+	// Asset     Asset    `json:"asset" gorm:"ForeignKey:id;References:id"`
+	// Quantity  float64  `json:"quantity"`
+	// Currency  Asset    `json:"currency" gorm:"ForeignKey:id;References:id"`
+	// SpotPrice float64  `json:"spot_price"`
+	// Subtotal  float64  `json:"subtotal"`
+	// Total     float64  `json:"total"`
+	// Fees      float64  `json:"fees"`
+	// TaxLots   []TaxLot `json:"tax_lots"`
+	// Notes     string   `json:"notes"`
 }
 
 type TaxLot struct {
@@ -58,4 +61,11 @@ func migrateModels(db *gorm.DB) {
 	db.AutoMigrate(&Asset{})
 	db.AutoMigrate(&Transaction{})
 	db.AutoMigrate(&TaxLot{})
+
+	newUser := User{FirstName: "Brandon", LastName: "Lee", Email: "brandon@gmail.com"}
+	db.Create(&newUser)
+	newAccount := Account{UserID: 1}
+	db.Create(&newAccount)
+	newTx := Transaction{From: 1}
+	db.Create(&newTx)
 }

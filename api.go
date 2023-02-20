@@ -12,7 +12,7 @@ import (
 
 func getUsers(w http.ResponseWriter, r *http.Request) {
 	var users []User
-	db.Find(&users)
+	db.Model(&User{}).Preload("Accounts").Find(&users)
 	if res, err := json.Marshal(&users); err == nil {
 		w.Header().Set("Content-Type", "application/json") // json header
 		w.Write(res)
@@ -67,7 +67,7 @@ func getAccounts(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// func getUser(w http.ResponseWriter, r *http.Request) {
+// func getAccount(w http.ResponseWriter, r *http.Request) {
 // 	id := chi.URLParam(r, "userId")
 
 // 	var user User
@@ -96,6 +96,52 @@ func postAccount(w http.ResponseWriter, r *http.Request) {
 }
 
 func (u *Account) Bind(r *http.Request) error {
+	if u == nil {
+		return errors.New("Missing account field")
+	}
+	return nil
+}
+
+func getTransactions(w http.ResponseWriter, r *http.Request) {
+	var transactions []Transaction
+	db.Find(&transactions)
+	if res, err := json.Marshal(&transactions); err == nil {
+		w.Header().Set("Content-Type", "application/json") // json header
+		w.Write(res)
+	} else {
+		panic("Failed to jsonify accounts!" + err.Error())
+	}
+}
+
+// func getAccount(w http.ResponseWriter, r *http.Request) {
+// 	id := chi.URLParam(r, "userId")
+
+// 	var user User
+// 	db.Find(&user, id)
+
+// 	if res, err := json.Marshal(&user); err == nil {
+// 		w.Header().Set("Content-Type", "application/json") // json header
+// 		w.Write(res)
+// 	} else {
+// 		panic("Get user request failed!" + err.Error())
+// 	}
+// }
+
+func postTransaction(w http.ResponseWriter, r *http.Request) {
+	var newTransaction Transaction
+
+	// Bind received JSON to newUser.
+	if err := render.Bind(r, &newTransaction); err != nil {
+		panic("Invalid request")
+	}
+
+	// Create
+	db.Create(&newTransaction)
+
+	w.Write([]byte(fmt.Sprintf("Post account %v successful!", newTransaction)))
+}
+
+func (u *Transaction) Bind(r *http.Request) error {
 	if u == nil {
 		return errors.New("Missing account field")
 	}
