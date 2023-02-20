@@ -25,27 +25,29 @@ type Asset struct {
 
 type Transaction struct {
 	gorm.Model
-	Timestamp string  `json:"timestamp"`
-	Type      string  `json:"type"`
-	From      Account `json:"from" gorm:"many2many:from_account;ForeignKey:id;References:id"`
-	To        Account `json:"to" gorm:"many2many:to_account;ForeignKey:id;References:id"`
-	Asset     Asset   `json:"asset" gorm:"ForeignKey:id;References:id"`
-	Quantity  float64 `json:"quantity"`
-	Currency  Asset   `json:"currency" gorm:"ForeignKey:id;References:id"`
-	SpotPrice float64 `json:"spot_price"`
-	Subtotal  float64 `json:"subtotal"`
-	Total     float64 `json:"total"`
-	Fees      float64 `json:"fees"`
-	Notes     string  `json:"notes"`
+	Timestamp string   `json:"timestamp"`
+	Type      string   `json:"type"`
+	From      Account  `json:"from" gorm:"many2many:from_account;ForeignKey:id;References:id"`
+	To        Account  `json:"to" gorm:"many2many:to_account;ForeignKey:id;References:id"`
+	Asset     Asset    `json:"asset" gorm:"ForeignKey:id;References:id"`
+	Quantity  float64  `json:"quantity"`
+	Currency  Asset    `json:"currency" gorm:"ForeignKey:id;References:id"`
+	SpotPrice float64  `json:"spot_price"`
+	Subtotal  float64  `json:"subtotal"`
+	Total     float64  `json:"total"`
+	Fees      float64  `json:"fees"`
+	TaxLots   []TaxLot `json:"tax_lots"`
+	Notes     string   `json:"notes"`
 }
 
 type TaxLot struct {
 	gorm.Model
-	Timestamp string `json:"timestamp"`
-	// owner
-	// asset
-	Quantity float64 `json:"quantity"`
-	// Currency         float64 `json:"currency"`
+	Timestamp        string  `json:"timestamp"`
+	Account          Account `json:"account" gorm:"ForeignKey:id;References:id"`
+	TransactionID    uint    `json:"transaction_id"`
+	Asset            Asset   `json:"asset" gorm:"ForeignKey:id;References:id"`
+	Quantity         float64 `json:"quantity"`
+	Currency         Asset   `json:"currency" gorm:"ForeignKey:id;References:id"`
 	CostBasis        float64 `json:"cost_basis"`
 	QuantityRealized float64 `json:"quantity_realized"`
 }
@@ -53,5 +55,7 @@ type TaxLot struct {
 func migrateModels(db *gorm.DB) {
 	db.AutoMigrate(&User{})
 	db.AutoMigrate(&Account{})
+	db.AutoMigrate(&Asset{})
 	db.AutoMigrate(&Transaction{})
+	db.AutoMigrate(&TaxLot{})
 }
