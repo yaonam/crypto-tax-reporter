@@ -16,41 +16,48 @@ type Account struct {
 	Type       string `json:"type"`
 	ExternalID string `json:"external_id"`
 
-	FromTxs []Transaction `gorm:"foreignKey:From" json:"-"`
-	ToTxs   []Transaction `gorm:"foreignKey:To" json:"-"`
+	TxFroms []Transaction `gorm:"foreignKey:From" json:"-"`
+	TxTos   []Transaction `gorm:"foreignKey:To" json:"-"`
+	TaxLots []TaxLot      `json:"-"`
 }
 
 type Asset struct {
 	gorm.Model
 	Title  string `json:"title"`
 	Symbol string `json:"symbol"`
+
+	TxAssets     []Transaction `gorm:"foreignKey:Asset" json:"-"`
+	TxCurrencies []Transaction `gorm:"foreignKey:Currency" json:"-"`
+
+	TaxLotAssets     []TaxLot `gorm:"foreignKey:Asset" json:"-"`
+	TaxLotCurrencies []TaxLot `gorm:"foreignKey:Currency" json:"-"`
 }
 
 type Transaction struct {
 	gorm.Model
-	Timestamp string `json:"timestamp"`
-	Type      string `json:"type"`
-	From      uint   `json:"from"`
-	To        uint   `json:"to"`
-	// Asset     Asset    `json:"asset" gorm:"ForeignKey:id;References:id"`
-	// Quantity  float64  `json:"quantity"`
-	// Currency  Asset    `json:"currency" gorm:"ForeignKey:id;References:id"`
-	// SpotPrice float64  `json:"spot_price"`
-	// Subtotal  float64  `json:"subtotal"`
-	// Total     float64  `json:"total"`
-	// Fees      float64  `json:"fees"`
-	// TaxLots   []TaxLot `json:"tax_lots"`
-	// Notes     string   `json:"notes"`
+	Timestamp string   `json:"timestamp"`
+	Type      string   `json:"type"`
+	From      uint     `json:"from"`
+	To        uint     `json:"to"`
+	Asset     uint     `json:"asset"`
+	Quantity  float64  `json:"quantity"`
+	Currency  uint     `json:"currency"`
+	SpotPrice float64  `json:"spot_price"`
+	Subtotal  float64  `json:"subtotal"`
+	Total     float64  `json:"total"`
+	Fees      float64  `json:"fees"`
+	TaxLots   []TaxLot `json:"tax_lots"`
+	Notes     string   `json:"notes"`
 }
 
 type TaxLot struct {
 	gorm.Model
 	Timestamp        string  `json:"timestamp"`
-	Account          Account `json:"account" gorm:"ForeignKey:id;References:id"`
+	AccountID        uint    `json:"account_id"`
 	TransactionID    uint    `json:"transaction_id"`
-	Asset            Asset   `json:"asset" gorm:"ForeignKey:id;References:id"`
+	Asset            uint    `json:"asset"`
 	Quantity         float64 `json:"quantity"`
-	Currency         Asset   `json:"currency" gorm:"ForeignKey:id;References:id"`
+	Currency         uint    `json:"currency"`
 	CostBasis        float64 `json:"cost_basis"`
 	QuantityRealized float64 `json:"quantity_realized"`
 }
@@ -68,4 +75,6 @@ func migrateModels(db *gorm.DB) {
 	db.Create(&newAccount)
 	newTx := Transaction{From: 1}
 	db.Create(&newTx)
+	newTaxLot := TaxLot{TransactionID: 1}
+	db.Create(&newTaxLot)
 }

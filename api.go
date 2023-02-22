@@ -104,7 +104,7 @@ func (u *Account) Bind(r *http.Request) error {
 
 func getTransactions(w http.ResponseWriter, r *http.Request) {
 	var transactions []Transaction
-	db.Find(&transactions)
+	db.Model(&Transaction{}).Preload("TaxLots").Find(&transactions)
 	if res, err := json.Marshal(&transactions); err == nil {
 		w.Header().Set("Content-Type", "application/json") // json header
 		w.Write(res)
