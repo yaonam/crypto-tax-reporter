@@ -1,6 +1,11 @@
 package main
 
-import "gorm.io/gorm"
+import (
+	"fmt"
+	"log"
+
+	"gorm.io/gorm"
+)
 
 type User struct {
 	gorm.Model
@@ -69,12 +74,27 @@ func migrateModels(db *gorm.DB) {
 	db.AutoMigrate(&Transaction{})
 	db.AutoMigrate(&TaxLot{})
 
-	newUser := User{FirstName: "Brandon", LastName: "Lee", Email: "brandon@gmail.com"}
-	db.Create(&newUser)
-	newAccount := Account{UserID: 1}
-	db.Create(&newAccount)
-	newTx := Transaction{From: 1}
-	db.Create(&newTx)
-	newTaxLot := TaxLot{TransactionID: 1}
-	db.Create(&newTaxLot)
+	// newUser := User{FirstName: "Brandon", LastName: "Lee", Email: "brandon@gmail.com"}
+	// db.Create(&newUser)
+	// newAccount := Account{UserID: 1}
+	// db.Create(&newAccount)
+	// newTx := Transaction{From: 1}
+	// db.Create(&newTx)
+	// newTaxLot := TaxLot{TransactionID: 1}
+	// db.Create(&newTaxLot)
+}
+
+// TODO Make this into an interface generic
+func findAssetOrCreate(currency string) uint {
+	var asset Asset
+	result := db.Where("symbol = ?", currency).First(&asset)
+
+	// If not found, createt new asset
+	if result.Error == gorm.ErrRecordNotFound {
+		newAsset := Asset{Title: currency, Symbol: currency}
+		db.Create(&newAsset)
+		log.Println("Createtd new Asset: " + currency + fmt.Sprint(newAsset.ID))
+		return newAsset.ID
+	}
+	return asset.ID
 }
