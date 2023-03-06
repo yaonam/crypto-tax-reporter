@@ -16,7 +16,7 @@ Modules -> Packages -> Files
 
 For Windows:
 
-`nodemon --watch './**/*.go' -e go,json --signal SIGKILL --exec 'go' run .`
+`nodemon --watch './**/*.go' -e go,json --signal SIGKILL --exec go run .`
 
 `go mod init {MODULE_NAME}` to create project dependency file
 `go get .` to automatically track dependencies (based on imports)

@@ -28,6 +28,9 @@ func openFile() {
 	log.Printf("Parsed %v transactions", len(txList))
 
 	// save the array to db
+	for _, tx := range txList {
+		db.FirstOrCreate(&tx, tx)
+	}
 	// db.Create(&txList)
 }
 
@@ -54,7 +57,7 @@ func parseTxList(data [][]string) []Transaction {
 			tx.Type = line[1]
 			tx.Asset = findAssetOrCreate(line[2]) // Need to conver
 			tx.Quantity = parseFloatOrZero(line[3])
-			tx.Currency = parseUintOrZero(line[4]) // Need to conver
+			tx.Currency = findAssetOrCreate(line[4]) // Need to conver
 			tx.SpotPrice = parseFloatOrZero(line[5])
 			tx.Subtotal = parseFloatOrZero(line[6])
 			tx.Total = parseFloatOrZero(line[7])

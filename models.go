@@ -74,14 +74,14 @@ func migrateModels(db *gorm.DB) {
 	db.AutoMigrate(&Transaction{})
 	db.AutoMigrate(&TaxLot{})
 
-	// newUser := User{FirstName: "Brandon", LastName: "Lee", Email: "brandon@gmail.com"}
-	// db.Create(&newUser)
-	// newAccount := Account{UserID: 1}
-	// db.Create(&newAccount)
-	// newTx := Transaction{From: 1}
-	// db.Create(&newTx)
-	// newTaxLot := TaxLot{TransactionID: 1}
-	// db.Create(&newTaxLot)
+	newUser := User{FirstName: "Brandon", LastName: "Lee", Email: "brandon@gmail.com"}
+	db.FirstOrCreate(&newUser)
+	newAccount := Account{UserID: 1}
+	db.FirstOrCreate(&newAccount)
+	newTx := Transaction{From: 1}
+	db.FirstOrCreate(&newTx)
+	newTaxLot := TaxLot{TransactionID: 1}
+	db.FirstOrCreate(&newTaxLot)
 }
 
 // TODO Make this into an interface generic
