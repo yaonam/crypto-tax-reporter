@@ -74,7 +74,7 @@ func migrateModels(db *gorm.DB) {
 	db.AutoMigrate(&Transaction{})
 	db.AutoMigrate(&TaxLot{})
 
-	newUser := User{FirstName: "Brandon", LastName: "Lee", Email: "brandon@gmail.com"}
+	newUser := User{FirstName: "Elim", LastName: "Poon", Email: "elim@gmail.com"}
 	db.FirstOrCreate(&newUser)
 	newAccount := Account{UserID: 1}
 	db.FirstOrCreate(&newAccount)
@@ -97,4 +97,10 @@ func findAssetOrCreate(currency string) uint {
 		return newAsset.ID
 	}
 	return asset.ID
+}
+
+func findAccountOrCreate(userID uint, externalID string) uint {
+	account := Account{UserID: userID, ExternalID: externalID}
+	db.FirstOrCreate(&account, account)
+	return account.ID
 }

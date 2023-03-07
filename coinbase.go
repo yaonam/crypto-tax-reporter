@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 )
 
 func openFile() {
@@ -24,7 +25,7 @@ func openFile() {
 	}
 
 	// convert records to array of structs
-	txList := parseTxList(data)
+	txList := parseTxList(1, data)
 	log.Printf("Parsed %v transactions", len(txList))
 
 	// save the array to db
@@ -48,10 +49,11 @@ func parseUintOrZero(s string) uint {
 	return 0
 }
 
-func parseTxList(data [][]string) []Transaction {
+func parseTxList(userID uint, data [][]string) []Transaction {
 	var txList []Transaction
 	for i, line := range data {
 		if i > 0 { // skip headers
+			// Coinbase columns
 			var tx Transaction
 			tx.Timestamp = line[0]
 			tx.Type = line[1]
@@ -63,6 +65,14 @@ func parseTxList(data [][]string) []Transaction {
 			tx.Total = parseFloatOrZero(line[7])
 			tx.Fees = parseFloatOrZero(line[8])
 			tx.Notes = line[9]
+
+			// Accounts
+			tx.From = userID
+			if line[1] == "Send" {
+				// Split string
+				externalID := strings.Split(line[9], "to ")[1]
+				tx.To = findAccountOrCreate(userID, externalID)
+			}
 
 			txList = append(txList, tx)
 		}
