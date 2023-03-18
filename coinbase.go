@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/csv"
 	"log"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -32,6 +33,7 @@ func openFile() {
 	for _, tx := range txList {
 		db.FirstOrCreate(&tx, tx)
 	}
+	// Deprecated...
 	// db.Create(&txList)
 }
 
@@ -53,76 +55,86 @@ func parseTxList(userID uint, data [][]string) []Transaction {
 	var txList []Transaction
 	for i, line := range data {
 		if i > 0 { // skip headers
+			// TODO: Convert types to lowercase
+			// TODO: Create Coinbase struct, parse first?
 			// Handle based on type
-			// select case...
+			switch txType := line[1]; txType {
+			case "Convert":
+				handleConvert(userID, &txList, line)
+			default:
+				// Coinbase columns
+				var tx Transaction
+				tx.Timestamp = line[0]
+				tx.Type = line[1]
+				tx.Asset = findAssetOrCreate(line[2])
+				tx.Quantity = parseFloatOrZero(line[3])
+				tx.Currency = findAssetOrCreate(line[4])
+				tx.SpotPrice = parseFloatOrZero(line[5])
+				tx.Subtotal = parseFloatOrZero(line[6])
+				tx.Total = parseFloatOrZero(line[7])
+				tx.Fees = parseFloatOrZero(line[8])
+				tx.Notes = line[9]
 
-			// Coinbase columns
-			var tx Transaction
-			tx.Timestamp = line[0]
-			tx.Type = line[1]
-			tx.Asset = findAssetOrCreate(line[2])
-			tx.Quantity = parseFloatOrZero(line[3])
-			tx.Currency = findAssetOrCreate(line[4])
-			tx.SpotPrice = parseFloatOrZero(line[5])
-			tx.Subtotal = parseFloatOrZero(line[6])
-			tx.Total = parseFloatOrZero(line[7])
-			tx.Fees = parseFloatOrZero(line[8])
-			tx.Notes = line[9]
+				// Accounts
+				tx.From = userID
+				if line[1] == "Send" {
+					// Split string
+					externalID := strings.Split(line[9], "to ")[1]
+					tx.To = findAccountOrCreate(userID, externalID)
+				}
 
-			// Accounts
-			tx.From = userID
-			if line[1] == "Send" {
-				// Split string
-				externalID := strings.Split(line[9], "to ")[1]
-				tx.To = findAccountOrCreate(userID, externalID)
+				txList = append(txList, tx)
 			}
-
-			txList = append(txList, tx)
 		}
 	}
 	return txList
 }
 
 // TODO: Figure out if I need to make args pointers
-func handleConvert(userID uint, txList []Transaction, line []string) {
+func handleConvert(userID uint, txList *[]Transaction, line []string) {
+	currency := findAssetOrCreate(line[4])
+	spotPrice := parseFloatOrZero(line[5])
+	subtotal := parseFloatOrZero(line[6])
+	total := parseFloatOrZero(line[7])
+	fees := parseFloatOrZero(line[8])
 	notesSplit := strings.Split(line[9], " ")
 
-	// Create sell sellTx
+	// Create sell tx, assign all fees to sell
 	var sellTx Transaction
 	sellTx.Timestamp = line[0]
-	sellTx.Type = line[1]
+	sellTx.Type = "sell"
 	sellTx.Asset = findAssetOrCreate(notesSplit[2])
 	sellTx.Quantity = parseFloatOrZero(notesSplit[1])
-	sellTx.Currency = findAssetOrCreate(line[4])
-	sellTx.SpotPrice = parseFloatOrZero(line[5])
+	sellTx.Currency = currency
+	sellTx.SpotPrice = spotPrice
 	// Total will be less than subtotal due to fees
-	sellTx.Subtotal = parseFloatOrZero(line[7])
-	sellTx.Total = parseFloatOrZero(line[6])
-	sellTx.Fees = parseFloatOrZero(line[8])
+	sellTx.Subtotal = total
+	sellTx.Total = subtotal
+	sellTx.Fees = fees
 	sellTx.Notes = line[9]
 
 	// Accounts
 	sellTx.From = userID
 
-	txList = append(txList, sellTx)
+	*txList = append(*txList, sellTx)
 
 	// Create buy tx
 	var buyTx Transaction
 	buyTx.Timestamp = line[0]
-	buyTx.Type = line[1]
+	buyTx.Type = "buy"
 	buyTx.Asset = findAssetOrCreate(notesSplit[5])
 	buyTx.Quantity = parseFloatOrZero(notesSplit[4])
-	buyTx.Currency = findAssetOrCreate(line[4])
-	buyTx.SpotPrice = parseFloatOrZero(line[5])
-	buyTx.Subtotal = parseFloatOrZero(line[6])
-	buyTx.Total = parseFloatOrZero(line[6])
+	buyTx.Currency = currency
+	buyTx.SpotPrice = math.Round(100*subtotal/parseFloatOrZero(notesSplit[4])) / 100
+	buyTx.Subtotal = subtotal
+	buyTx.Total = subtotal
 	buyTx.Fees = 0
 	buyTx.Notes = line[9]
 
 	// Accounts
 	buyTx.From = userID
 
-	txList = append(txList, buyTx)
+	*txList = append(*txList, buyTx)
 }
 
 func handleReward() {}
