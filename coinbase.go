@@ -42,6 +42,7 @@ func openFile(accountID uint) {
 
 	// Create tax lots based on txList, mb only use new ones?
 	taxLots := getTaxLotsFromTxs(accountID, newTxList)
+	// TODO Fill tax lots with sell txs
 	// Save tax lots to db
 	for _, taxLot := range taxLots {
 		db.FirstOrCreate(&taxLot, taxLot)

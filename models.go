@@ -64,6 +64,7 @@ type TaxLot struct {
 	Quantity         float64 `json:"quantity"`
 	Currency         uint    `json:"currency"`
 	CostBasis        float64 `json:"cost_basis"`
+	IsSold           bool    `json:"is_sold"`
 	QuantityRealized float64 `json:"quantity_realized"`
 }
 
