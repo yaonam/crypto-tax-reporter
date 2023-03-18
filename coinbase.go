@@ -75,7 +75,12 @@ func handleBuySell(userID uint, txList *[]Transaction, line []string) {
 	// Coinbase columns
 	var tx Transaction
 	tx.Timestamp = line[0]
-	tx.Type = line[1]
+	switch txType := line[1]; txType {
+	case "Buy", "Advanced Trade Buy":
+		tx.Type = "buy"
+	case "Sell", "Advanced Trade Sell":
+		tx.Type = "sell"
+	}
 	tx.Asset = findAssetOrCreate(line[2])
 	tx.Quantity = parseFloatOrZero(line[3])
 	tx.Currency = findAssetOrCreate(line[4])
