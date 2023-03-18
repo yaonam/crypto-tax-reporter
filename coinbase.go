@@ -24,6 +24,7 @@ func openFile() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	f.Close()
 
 	// convert records to array of structs
 	txList := parseTxList(1, data)
