@@ -9,7 +9,10 @@ import (
 	"strings"
 )
 
-func openFile() {
+func openFile(accountID uint) {
+	if accountID == 0 {
+		accountID = 1
+	}
 	f, err := os.Open("csv/data.csv")
 	if err != nil {
 		log.Fatal(err)
@@ -27,7 +30,7 @@ func openFile() {
 	f.Close()
 
 	// convert records to array of structs
-	txList := parseTxList(1, data)
+	txList := parseTxList(accountID, data)
 	log.Printf("Parsed %v transactions", len(txList))
 
 	// save the array to db
@@ -51,27 +54,26 @@ func parseUintOrZero(s string) uint {
 	return 0
 }
 
-func parseTxList(userID uint, data [][]string) []Transaction {
+func parseTxList(accountID uint, data [][]string) []Transaction {
 	var txList []Transaction
 	for i, line := range data {
 		if i > 0 { // skip headers
 			// TODO: Convert types to lowercase
-			// TODO: Create Coinbase struct, parse first?
 			// Handle based on type
 			switch txType := line[1]; txType {
 			case "Convert":
-				handleConvert(userID, &txList, line)
+				handleConvert(accountID, &txList, line)
 			case "Learning Reward":
-				handleReward(userID, &txList, line)
+				handleReward(accountID, &txList, line)
 			default:
-				handleBuySell(userID, &txList, line)
+				handleBuySell(accountID, &txList, line)
 			}
 		}
 	}
 	return txList
 }
 
-func handleBuySell(userID uint, txList *[]Transaction, line []string) {
+func handleBuySell(accountID uint, txList *[]Transaction, line []string) {
 	// Coinbase columns
 	var tx Transaction
 	tx.Timestamp = line[0]
@@ -81,6 +83,7 @@ func handleBuySell(userID uint, txList *[]Transaction, line []string) {
 	case "Sell", "Advanced Trade Sell":
 		tx.Type = "sell"
 	}
+	// TODO: Find gas fee when sending to eth wallet
 	tx.Asset = findAssetOrCreate(line[2])
 	tx.Quantity = parseFloatOrZero(line[3])
 	tx.Currency = findAssetOrCreate(line[4])
@@ -91,17 +94,17 @@ func handleBuySell(userID uint, txList *[]Transaction, line []string) {
 	tx.Notes = line[9]
 
 	// Accounts
-	tx.From = userID
+	tx.From = accountID
 	if line[1] == "Send" {
 		// Split string
 		externalID := strings.Split(line[9], "to ")[1]
-		tx.To = findAccountOrCreate(userID, externalID)
+		tx.To = findAccountOrCreate(accountID, externalID)
 	}
 
 	*txList = append(*txList, tx)
 }
 
-func handleConvert(userID uint, txList *[]Transaction, line []string) {
+func handleConvert(accountID uint, txList *[]Transaction, line []string) {
 	currency := findAssetOrCreate(line[4])
 	spotPrice := parseFloatOrZero(line[5])
 	subtotal := parseFloatOrZero(line[6])
@@ -124,7 +127,7 @@ func handleConvert(userID uint, txList *[]Transaction, line []string) {
 	sellTx.Notes = line[9]
 
 	// Accounts
-	sellTx.From = userID
+	sellTx.From = accountID
 
 	*txList = append(*txList, sellTx)
 
@@ -142,12 +145,12 @@ func handleConvert(userID uint, txList *[]Transaction, line []string) {
 	buyTx.Notes = line[9]
 
 	// Accounts
-	buyTx.From = userID
+	buyTx.From = accountID
 
 	*txList = append(*txList, buyTx)
 }
 
-func handleReward(userID uint, txList *[]Transaction, line []string) {
+func handleReward(accountID uint, txList *[]Transaction, line []string) {
 	// Create buy tx with 0 cost
 	var tx Transaction
 	tx.Timestamp = line[0]
@@ -162,7 +165,7 @@ func handleReward(userID uint, txList *[]Transaction, line []string) {
 	tx.Notes = line[9]
 
 	// Accounts
-	tx.From = userID
+	tx.From = accountID
 
 	*txList = append(*txList, tx)
 }
