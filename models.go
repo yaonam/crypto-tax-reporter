@@ -104,3 +104,5 @@ func findAccountOrCreate(userID uint, externalID string) uint {
 	db.FirstOrCreate(&account, account)
 	return account.ID
 }
+
+// TODO Use receiver functions to generalize similar functions?

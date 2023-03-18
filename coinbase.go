@@ -10,9 +10,6 @@ import (
 )
 
 func openFile(accountID uint) {
-	if accountID == 0 {
-		accountID = 1
-	}
 	f, err := os.Open("csv/data.csv")
 	if err != nil {
 		log.Fatal(err)
@@ -35,8 +32,19 @@ func openFile(accountID uint) {
 
 	// save the array to db
 	// TODO: Query to find existing rows, remove from txList, then upload in 2nd query
+	var newTxList []Transaction
 	for _, tx := range txList {
-		db.FirstOrCreate(&tx, tx)
+		result := db.FirstOrCreate(&tx, tx)
+		newTxList = append(newTxList, tx)
+		if result.RowsAffected == 1 {
+		}
+	}
+
+	// Create tax lots based on txList, mb only use new ones?
+	taxLots := getTaxLotsFromTxs(accountID, newTxList)
+	// Save tax lots to db
+	for _, taxLot := range taxLots {
+		db.FirstOrCreate(&taxLot, taxLot)
 	}
 }
 
@@ -62,18 +70,18 @@ func parseTxList(accountID uint, data [][]string) []Transaction {
 			// Handle based on type
 			switch txType := line[1]; txType {
 			case "Convert":
-				handleConvert(accountID, &txList, line)
+				txList = append(txList, handleConvert(accountID, line)...)
 			case "Learning Reward":
-				handleReward(accountID, &txList, line)
+				txList = append(txList, handleReward(accountID, line))
 			default:
-				handleBuySell(accountID, &txList, line)
+				txList = append(txList, handleBuySell(accountID, line))
 			}
 		}
 	}
 	return txList
 }
 
-func handleBuySell(accountID uint, txList *[]Transaction, line []string) {
+func handleBuySell(accountID uint, line []string) Transaction {
 	// Coinbase columns
 	var tx Transaction
 	tx.Timestamp = line[0]
@@ -101,10 +109,10 @@ func handleBuySell(accountID uint, txList *[]Transaction, line []string) {
 		tx.To = findAccountOrCreate(accountID, externalID)
 	}
 
-	*txList = append(*txList, tx)
+	return tx
 }
 
-func handleConvert(accountID uint, txList *[]Transaction, line []string) {
+func handleConvert(accountID uint, line []string) []Transaction {
 	currency := findAssetOrCreate(line[4])
 	spotPrice := parseFloatOrZero(line[5])
 	subtotal := parseFloatOrZero(line[6])
@@ -129,8 +137,6 @@ func handleConvert(accountID uint, txList *[]Transaction, line []string) {
 	// Accounts
 	sellTx.From = accountID
 
-	*txList = append(*txList, sellTx)
-
 	// Create buy tx
 	var buyTx Transaction
 	buyTx.Timestamp = line[0]
@@ -147,10 +153,10 @@ func handleConvert(accountID uint, txList *[]Transaction, line []string) {
 	// Accounts
 	buyTx.From = accountID
 
-	*txList = append(*txList, buyTx)
+	return []Transaction{sellTx, buyTx}
 }
 
-func handleReward(accountID uint, txList *[]Transaction, line []string) {
+func handleReward(accountID uint, line []string) Transaction {
 	// Create buy tx with 0 cost
 	var tx Transaction
 	tx.Timestamp = line[0]
@@ -167,5 +173,26 @@ func handleReward(accountID uint, txList *[]Transaction, line []string) {
 	// Accounts
 	tx.From = accountID
 
-	*txList = append(*txList, tx)
+	return tx
+}
+
+func getTaxLotsFromTxs(accountID uint, txList []Transaction) []TaxLot {
+	var taxLotList []TaxLot
+
+	for _, tx := range txList {
+		if tx.Type == "buy" {
+			var taxLot TaxLot
+			taxLot.Timestamp = tx.Timestamp
+			taxLot.AccountID = accountID
+			taxLot.TransactionID = tx.ID
+			taxLot.Asset = tx.Asset
+			taxLot.Quantity = tx.Quantity
+			taxLot.Currency = tx.Currency
+			taxLot.CostBasis = tx.Total
+
+			taxLotList = append(taxLotList, taxLot)
+		}
+	}
+
+	return taxLotList
 }

@@ -26,7 +26,7 @@ func main() {
 	// Migrate the schema
 	migrateModels(db)
 
-	openFile()
+	openFile(1)
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
