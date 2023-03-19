@@ -8,6 +8,8 @@ Chi is used instead of the stdlib for middleware support?
 
 Gorm for object relational mapping.
 
+Adhering to layout as specified by https://github.com/golang-standards/project-layout
+
 ## Notes
 
 Modules -> Packages -> Files

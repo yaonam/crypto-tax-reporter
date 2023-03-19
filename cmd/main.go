@@ -10,6 +10,8 @@ import (
 
 	"github.com/glebarez/sqlite" // Pure go driver, doesn't need cgo
 	"gorm.io/gorm"
+
+	"crypto-tax-reporter/internal/coinbase"
 )
 
 var db *gorm.DB
@@ -26,7 +28,7 @@ func main() {
 	// Migrate the schema
 	migrateModels(db)
 
-	openFile(1)
+	coinbase.OpenFile(db, 1)
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)

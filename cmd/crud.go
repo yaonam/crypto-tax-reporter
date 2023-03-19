@@ -113,20 +113,6 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// func getAccount(w http.ResponseWriter, r *http.Request) {
-// 	id := chi.URLParam(r, "userId")
-
-// 	var user User
-// 	db.Find(&user, id)
-
-// 	if res, err := json.Marshal(&user); err == nil {
-// 		w.Header().Set("Content-Type", "application/json") // json header
-// 		w.Write(res)
-// 	} else {
-// 		panic("Get user request failed!" + err.Error())
-// 	}
-// }
-
 func postTransaction(w http.ResponseWriter, r *http.Request) {
 	var newTransaction Transaction
 

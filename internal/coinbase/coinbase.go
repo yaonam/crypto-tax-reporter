@@ -1,4 +1,4 @@
-package main
+package coinbase
 
 import (
 	"encoding/csv"
@@ -7,9 +7,11 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"gorm.io/gorm"
 )
 
-func openFile(accountID uint) {
+func OpenFile(db *gorm.DB, accountID uint) {
 	f, err := os.Open("csv/data.csv")
 	if err != nil {
 		log.Fatal(err)
@@ -42,6 +44,7 @@ func openFile(accountID uint) {
 
 	// Create tax lots based on txList, mb only use new ones?
 	taxLots := getTaxLotsFromTxs(accountID, newTxList)
+	// TODO Associate buy txs with their created taxlot
 	// TODO Fill tax lots with sell txs
 	// Save tax lots to db
 	for _, taxLot := range taxLots {
