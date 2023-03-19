@@ -9,6 +9,8 @@ import (
 	"strings"
 
 	"gorm.io/gorm"
+
+	"crypto-tax-reporter/cmd/models"
 )
 
 func OpenFile(db *gorm.DB, accountID uint) {
@@ -29,12 +31,12 @@ func OpenFile(db *gorm.DB, accountID uint) {
 	f.Close()
 
 	// convert records to array of structs
-	txList := parseTxList(accountID, data)
+	txList := parseTxList(db, accountID, data)
 	log.Printf("Parsed %v transactions", len(txList))
 
 	// save the array to db
 	// TODO: Query to find existing rows, remove from txList, then upload in 2nd query
-	var newTxList []Transaction
+	var newTxList []models.Transaction
 	for _, tx := range txList {
 		result := db.FirstOrCreate(&tx, tx)
 		newTxList = append(newTxList, tx)
@@ -66,28 +68,28 @@ func parseUintOrZero(s string) uint {
 	return 0
 }
 
-func parseTxList(accountID uint, data [][]string) []Transaction {
-	var txList []Transaction
+func parseTxList(db *gorm.DB, accountID uint, data [][]string) []models.Transaction {
+	var txList []models.Transaction
 	for i, line := range data {
 		if i > 0 { // skip headers
 			// TODO: Convert types to lowercase
 			// Handle based on type
 			switch txType := line[1]; txType {
 			case "Convert":
-				txList = append(txList, handleConvert(accountID, line)...)
+				txList = append(txList, handleConvert(db, accountID, line)...)
 			case "Learning Reward":
-				txList = append(txList, handleReward(accountID, line))
+				txList = append(txList, handleReward(db, accountID, line))
 			default:
-				txList = append(txList, handleBuySell(accountID, line))
+				txList = append(txList, handleBuySell(db, accountID, line))
 			}
 		}
 	}
 	return txList
 }
 
-func handleBuySell(accountID uint, line []string) Transaction {
+func handleBuySell(db *gorm.DB, accountID uint, line []string) models.Transaction {
 	// Coinbase columns
-	var tx Transaction
+	var tx models.Transaction
 	tx.Timestamp = line[0]
 	switch txType := line[1]; txType {
 	case "Buy", "Advanced Trade Buy":
@@ -96,9 +98,9 @@ func handleBuySell(accountID uint, line []string) Transaction {
 		tx.Type = "sell"
 	}
 	// TODO: Find gas fee when sending to eth wallet
-	tx.Asset = findAssetOrCreate(line[2])
+	tx.Asset = models.FindAssetOrCreate(db, line[2])
 	tx.Quantity = parseFloatOrZero(line[3])
-	tx.Currency = findAssetOrCreate(line[4])
+	tx.Currency = models.FindAssetOrCreate(db, line[4])
 	tx.SpotPrice = parseFloatOrZero(line[5])
 	tx.Subtotal = parseFloatOrZero(line[6])
 	tx.Total = parseFloatOrZero(line[7])
@@ -110,14 +112,14 @@ func handleBuySell(accountID uint, line []string) Transaction {
 	if line[1] == "Send" {
 		// Split string
 		externalID := strings.Split(line[9], "to ")[1]
-		tx.To = findAccountOrCreate(accountID, externalID)
+		tx.To = models.FindAccountOrCreate(db, accountID, externalID)
 	}
 
 	return tx
 }
 
-func handleConvert(accountID uint, line []string) []Transaction {
-	currency := findAssetOrCreate(line[4])
+func handleConvert(db *gorm.DB, accountID uint, line []string) []models.Transaction {
+	currency := models.FindAssetOrCreate(db, line[4])
 	spotPrice := parseFloatOrZero(line[5])
 	subtotal := parseFloatOrZero(line[6])
 	total := parseFloatOrZero(line[7])
@@ -125,10 +127,10 @@ func handleConvert(accountID uint, line []string) []Transaction {
 	notesSplit := strings.Split(line[9], " ")
 
 	// Create sell tx, assign all fees to sell
-	var sellTx Transaction
+	var sellTx models.Transaction
 	sellTx.Timestamp = line[0]
 	sellTx.Type = "sell"
-	sellTx.Asset = findAssetOrCreate(notesSplit[2])
+	sellTx.Asset = models.FindAssetOrCreate(db, notesSplit[2])
 	sellTx.Quantity = parseFloatOrZero(notesSplit[1])
 	sellTx.Currency = currency
 	sellTx.SpotPrice = spotPrice
@@ -142,10 +144,10 @@ func handleConvert(accountID uint, line []string) []Transaction {
 	sellTx.From = accountID
 
 	// Create buy tx
-	var buyTx Transaction
+	var buyTx models.Transaction
 	buyTx.Timestamp = line[0]
 	buyTx.Type = "buy"
-	buyTx.Asset = findAssetOrCreate(notesSplit[5])
+	buyTx.Asset = models.FindAssetOrCreate(db, notesSplit[5])
 	buyTx.Quantity = parseFloatOrZero(notesSplit[4])
 	buyTx.Currency = currency
 	buyTx.SpotPrice = math.Round(100*subtotal/parseFloatOrZero(notesSplit[4])) / 100
@@ -157,17 +159,17 @@ func handleConvert(accountID uint, line []string) []Transaction {
 	// Accounts
 	buyTx.From = accountID
 
-	return []Transaction{sellTx, buyTx}
+	return []models.Transaction{sellTx, buyTx}
 }
 
-func handleReward(accountID uint, line []string) Transaction {
+func handleReward(db *gorm.DB, accountID uint, line []string) models.Transaction {
 	// Create buy tx with 0 cost
-	var tx Transaction
+	var tx models.Transaction
 	tx.Timestamp = line[0]
 	tx.Type = "buy"
-	tx.Asset = findAssetOrCreate(line[2])
+	tx.Asset = models.FindAssetOrCreate(db, line[2])
 	tx.Quantity = parseFloatOrZero(line[3])
-	tx.Currency = findAssetOrCreate(line[4])
+	tx.Currency = models.FindAssetOrCreate(db, line[4])
 	tx.SpotPrice = parseFloatOrZero(line[5])
 	tx.Subtotal = 0
 	tx.Total = 0
@@ -180,12 +182,12 @@ func handleReward(accountID uint, line []string) Transaction {
 	return tx
 }
 
-func getTaxLotsFromTxs(accountID uint, txList []Transaction) []TaxLot {
-	var taxLotList []TaxLot
+func getTaxLotsFromTxs(accountID uint, txList []models.Transaction) []models.TaxLot {
+	var taxLotList []models.TaxLot
 
 	for _, tx := range txList {
 		if tx.Type == "buy" {
-			var taxLot TaxLot
+			var taxLot models.TaxLot
 			taxLot.Timestamp = tx.Timestamp
 			taxLot.AccountID = accountID
 			taxLot.TransactionID = tx.ID

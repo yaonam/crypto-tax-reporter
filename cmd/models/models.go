@@ -1,8 +1,10 @@
-package main
+package models
 
 import (
+	"errors"
 	"fmt"
 	"log"
+	"net/http"
 
 	"gorm.io/gorm"
 )
@@ -68,7 +70,7 @@ type TaxLot struct {
 	QuantityRealized float64 `json:"quantity_realized"`
 }
 
-func migrateModels(db *gorm.DB) {
+func MigrateModels(db *gorm.DB) {
 	db.AutoMigrate(&User{})
 	db.AutoMigrate(&Account{})
 	db.AutoMigrate(&Asset{})
@@ -86,7 +88,7 @@ func migrateModels(db *gorm.DB) {
 }
 
 // TODO Make this into an interface generic
-func findAssetOrCreate(currency string) uint {
+func FindAssetOrCreate(db *gorm.DB, currency string) uint {
 	var asset Asset
 	result := db.Where("symbol = ?", currency).First(&asset)
 
@@ -100,10 +102,31 @@ func findAssetOrCreate(currency string) uint {
 	return asset.ID
 }
 
-func findAccountOrCreate(userID uint, externalID string) uint {
+func FindAccountOrCreate(db *gorm.DB, userID uint, externalID string) uint {
 	account := Account{UserID: userID, ExternalID: externalID}
 	db.FirstOrCreate(&account, account)
 	return account.ID
+}
+
+func (u *User) Bind(r *http.Request) error {
+	if u == nil {
+		return errors.New("missing user field")
+	}
+	return nil
+}
+
+func (u *Account) Bind(r *http.Request) error {
+	if u == nil {
+		return errors.New("missing account field")
+	}
+	return nil
+}
+
+func (u *Transaction) Bind(r *http.Request) error {
+	if u == nil {
+		return errors.New("missing transaction field")
+	}
+	return nil
 }
 
 // TODO Use receiver functions to generalize similar functions?

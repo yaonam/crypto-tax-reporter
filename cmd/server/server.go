@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"log"
@@ -11,7 +11,8 @@ import (
 	"github.com/glebarez/sqlite" // Pure go driver, doesn't need cgo
 	"gorm.io/gorm"
 
-	"crypto-tax-reporter/internal/coinbase"
+	"crypto-tax-reporter/cmd/coinbase"
+	"crypto-tax-reporter/cmd/models"
 )
 
 var db *gorm.DB
@@ -26,7 +27,7 @@ func main() {
 	}
 
 	// Migrate the schema
-	migrateModels(db)
+	models.MigrateModels(db)
 
 	coinbase.OpenFile(db, 1)
 
