@@ -46,7 +46,6 @@ func OpenFile(db *gorm.DB, accountID uint) {
 
 	// Create tax lots based on txList, mb only use new ones?
 	taxLots := getTaxLotsFromTxs(db, accountID, newTxList)
-	// TODO Fill tax lots with sell txs
 	// Save tax lots to db
 	for _, taxLot := range taxLots {
 		db.FirstOrCreate(&taxLot, taxLot)
@@ -181,10 +180,10 @@ func handleReward(db *gorm.DB, accountID uint, line []string) models.Transaction
 	return tx
 }
 
+// TODO Move this out of coinbase.go
 func getTaxLotsFromTxs(db *gorm.DB, accountID uint, txList []models.Transaction) []models.TaxLot {
 	var taxLotList []models.TaxLot
 
-	// TODO Associate buy txs with their created taxlot
 	for _, tx := range txList {
 		if tx.Type == "buy" {
 			var taxLot models.TaxLot
@@ -203,7 +202,6 @@ func getTaxLotsFromTxs(db *gorm.DB, accountID uint, txList []models.Transaction)
 			// Sell tax lots until meet full sell sellQuantity
 			for sellQuantity := tx.Quantity; sellQuantity > 0; {
 				var taxLot models.TaxLot
-				// TODO Match currency and stuff
 				// TODO Make sure taxlot is before sell tx
 				db.Where("asset == ? AND is_sold == ?", tx.Asset, false).Order("Timestamp").First(&taxLot)
 				taxLotQuantityRemaining := taxLot.Quantity - taxLot.QuantityRealized
