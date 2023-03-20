@@ -9,6 +9,8 @@ import (
 	"gorm.io/gorm"
 )
 
+// TODO Change timestamps to time.Time type
+
 type User struct {
 	gorm.Model
 	FirstName string    `json:"first_name"`

@@ -1,1 +1,1 @@
-nodemon --watch ./**/*.go -e go,json --signal SIGKILL --exec go run .
+nodemon --watch ./**/*.go -e go,json --signal SIGKILL --exec go run .\cmd\main.go

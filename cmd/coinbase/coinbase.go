@@ -45,8 +45,7 @@ func OpenFile(db *gorm.DB, accountID uint) {
 	}
 
 	// Create tax lots based on txList, mb only use new ones?
-	taxLots := getTaxLotsFromTxs(accountID, newTxList)
-	// TODO Associate buy txs with their created taxlot
+	taxLots := getTaxLotsFromTxs(db, accountID, newTxList)
 	// TODO Fill tax lots with sell txs
 	// Save tax lots to db
 	for _, taxLot := range taxLots {
@@ -182,9 +181,10 @@ func handleReward(db *gorm.DB, accountID uint, line []string) models.Transaction
 	return tx
 }
 
-func getTaxLotsFromTxs(accountID uint, txList []models.Transaction) []models.TaxLot {
+func getTaxLotsFromTxs(db *gorm.DB, accountID uint, txList []models.Transaction) []models.TaxLot {
 	var taxLotList []models.TaxLot
 
+	// TODO Associate buy txs with their created taxlot
 	for _, tx := range txList {
 		if tx.Type == "buy" {
 			var taxLot models.TaxLot
@@ -197,6 +197,29 @@ func getTaxLotsFromTxs(accountID uint, txList []models.Transaction) []models.Tax
 			taxLot.CostBasis = tx.Total
 
 			taxLotList = append(taxLotList, taxLot)
+			db.Model(&tx).Association("TaxLots").Append(&taxLot)
+		} else if tx.Type == "sell" {
+			var associatedTaxLots []models.TaxLot
+			// Sell tax lots until meet full sell sellQuantity
+			for sellQuantity := tx.Quantity; sellQuantity > 0; {
+				var taxLot models.TaxLot
+				// TODO Match currency and stuff
+				// TODO Make sure taxlot is before sell tx
+				db.Where("asset == ? AND is_sold == ?", tx.Asset, false).Order("Timestamp").First(&taxLot)
+				taxLotQuantityRemaining := taxLot.Quantity - taxLot.QuantityRealized
+				if sellQuantity >= taxLotQuantityRemaining {
+					taxLot.QuantityRealized = taxLot.Quantity
+					taxLot.IsSold = true
+					db.Save(&taxLot)
+					sellQuantity -= taxLotQuantityRemaining
+				} else {
+					taxLot.QuantityRealized += sellQuantity
+					db.Save(&taxLot)
+					sellQuantity = 0
+				}
+				associatedTaxLots = append(associatedTaxLots, taxLot)
+			}
+			db.Model(&tx).Association("TaxLots").Append(&associatedTaxLots)
 		}
 	}
 

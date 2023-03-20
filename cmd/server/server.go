@@ -17,7 +17,7 @@ import (
 
 var db *gorm.DB
 
-func main() {
+func RunServer() {
 	log.SetOutput(os.Stdout)
 	os.Remove("test.db")
 	var err error
