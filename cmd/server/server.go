@@ -13,6 +13,7 @@ import (
 
 	"crypto-tax-reporter/cmd/coinbase"
 	"crypto-tax-reporter/cmd/models"
+	"crypto-tax-reporter/cmd/taxes"
 )
 
 var db *gorm.DB
@@ -29,7 +30,10 @@ func RunServer() {
 	// Migrate the schema
 	models.MigrateModels(db)
 
+	// Dev, temp func calls
 	coinbase.OpenFile(db, 1)
+	pnl := taxes.CalculatePNL(db, 1)
+	log.Printf("PNL: %v", pnl)
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)

@@ -107,7 +107,7 @@ func handleBuySell(db *gorm.DB, accountID uint, line []string) models.Transactio
 	tx.Notes = line[9]
 
 	// Accounts
-	tx.From = accountID
+	tx.FromID = accountID
 	if line[1] == "Send" {
 		// Split string
 		externalID := strings.Split(line[9], "to ")[1]
@@ -140,7 +140,7 @@ func handleConvert(db *gorm.DB, accountID uint, line []string) []models.Transact
 	sellTx.Notes = line[9]
 
 	// Accounts
-	sellTx.From = accountID
+	sellTx.FromID = accountID
 
 	// Create buy tx
 	var buyTx models.Transaction
@@ -156,7 +156,7 @@ func handleConvert(db *gorm.DB, accountID uint, line []string) []models.Transact
 	buyTx.Notes = line[9]
 
 	// Accounts
-	buyTx.From = accountID
+	buyTx.FromID = accountID
 
 	return []models.Transaction{sellTx, buyTx}
 }
@@ -176,7 +176,7 @@ func handleReward(db *gorm.DB, accountID uint, line []string) models.Transaction
 	tx.Notes = line[9]
 
 	// Accounts
-	tx.From = accountID
+	tx.FromID = accountID
 
 	return tx
 }

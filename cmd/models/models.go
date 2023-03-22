@@ -46,7 +46,8 @@ type Transaction struct {
 	gorm.Model
 	Timestamp string   `json:"timestamp"`
 	Type      string   `json:"type"`
-	From      uint     `json:"from"`
+	FromID    uint     `json:"from_id"`
+	From      Account  `json:"from"`
 	To        uint     `json:"to"`
 	Asset     uint     `json:"asset"`
 	Quantity  float64  `json:"quantity"`
@@ -57,6 +58,8 @@ type Transaction struct {
 	Fees      float64  `json:"fees"`
 	TaxLots   []TaxLot `json:"tax_lots"`
 	Notes     string   `json:"notes"`
+
+	TaxLotSales []TaxLotSale `json:"-"`
 }
 
 type TaxLot struct {
@@ -70,13 +73,17 @@ type TaxLot struct {
 	CostBasis        float64 `json:"cost_basis"`
 	IsSold           bool    `json:"is_sold"`
 	QuantityRealized float64 `json:"quantity_realized"`
+
+	TaxLotSales []TaxLotSale `json:"-"`
 }
 
 type TaxLotSale struct {
 	gorm.Model
-	TransactionID uint    `json:"transaction_id"`
-	TaxLotID      uint    `json:"taxlot_id"`
-	QuantitySold  float64 `json:"quantity"`
+	TransactionID uint        `json:"transaction_id"`
+	Transaction   Transaction `json:"transaction"`
+	TaxLotID      uint        `json:"taxlot_id"`
+	TaxLot        TaxLot      `json:"taxlot"`
+	QuantitySold  float64     `json:"quantity"`
 }
 
 func MigrateModels(db *gorm.DB) {
@@ -85,12 +92,13 @@ func MigrateModels(db *gorm.DB) {
 	db.AutoMigrate(&Asset{})
 	db.AutoMigrate(&Transaction{})
 	db.AutoMigrate(&TaxLot{})
+	db.AutoMigrate(&TaxLotSale{})
 
 	newUser := User{FirstName: "Elim", LastName: "Poon", Email: "elim@gmail.com"}
 	db.FirstOrCreate(&newUser)
 	newAccount := Account{UserID: 1}
 	db.FirstOrCreate(&newAccount)
-	newTx := Transaction{From: 1}
+	newTx := Transaction{From: newAccount}
 	db.FirstOrCreate(&newTx)
 	newTaxLot := TaxLot{TransactionID: 1}
 	db.FirstOrCreate(&newTaxLot)
