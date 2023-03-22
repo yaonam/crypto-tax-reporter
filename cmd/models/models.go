@@ -72,6 +72,13 @@ type TaxLot struct {
 	QuantityRealized float64 `json:"quantity_realized"`
 }
 
+type TaxLotSale struct {
+	gorm.Model
+	TransactionID uint    `json:"transaction_id"`
+	TaxLotID      uint    `json:"taxlot_id"`
+	QuantitySold  float64 `json:"quantity"`
+}
+
 func MigrateModels(db *gorm.DB) {
 	db.AutoMigrate(&User{})
 	db.AutoMigrate(&Account{})
