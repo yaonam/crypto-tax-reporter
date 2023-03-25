@@ -39,7 +39,8 @@ func GetTaxLotsFromTxs(db *gorm.DB, accountID uint, txList []models.Transaction)
 			taxLot.CostBasis = tx.Total
 
 			taxLotList = append(taxLotList, taxLot)
-			db.Model(&tx).Association("TaxLots").Append(&taxLot)
+			// db.Model(&tx).Association("TaxLots").Append(&taxLot)
+			db.Where("transaction_id == ?", tx.ID).FirstOrCreate(&taxLot)
 		} else if tx.Type == "sell" {
 			var associatedTaxLots []models.TaxLot
 			var taxLotSales []models.TaxLotSale
@@ -70,6 +71,10 @@ func GetTaxLotsFromTxs(db *gorm.DB, accountID uint, txList []models.Transaction)
 				})
 			}
 			db.Model(&tx).Association("TaxLots").Append(&associatedTaxLots)
+			// db.FirstOrCreate(&associatedTaxLots)
+			for _, taxLotSale := range taxLotSales {
+				db.FirstOrCreate(&taxLotSale, taxLotSale)
+			}
 		}
 	}
 

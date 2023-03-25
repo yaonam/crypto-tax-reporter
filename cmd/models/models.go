@@ -44,10 +44,11 @@ type Asset struct {
 
 type Transaction struct {
 	gorm.Model
-	Timestamp string   `json:"timestamp"`
-	Type      string   `json:"type"`
-	FromID    uint     `json:"from_id"`
-	From      Account  `json:"from"`
+	Timestamp string `json:"timestamp"`
+	Type      string `json:"type"`
+	From      uint   `json:"from"`
+	// FromID    uint   `json:"from_id"`
+	// From      Account  `json:"from"`
 	To        uint     `json:"to"`
 	Asset     uint     `json:"asset"`
 	Quantity  float64  `json:"quantity"`
@@ -98,7 +99,7 @@ func MigrateModels(db *gorm.DB) {
 	db.FirstOrCreate(&newUser)
 	newAccount := Account{UserID: 1}
 	db.FirstOrCreate(&newAccount)
-	newTx := Transaction{From: newAccount}
+	newTx := Transaction{From: newAccount.ID}
 	db.FirstOrCreate(&newTx)
 	newTaxLot := TaxLot{TransactionID: 1}
 	db.FirstOrCreate(&newTaxLot)

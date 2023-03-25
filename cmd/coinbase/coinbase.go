@@ -39,18 +39,19 @@ func OpenFile(db *gorm.DB, accountID uint) {
 	// TODO: Query to find existing rows, remove from txList, then upload in 2nd query
 	var newTxList []models.Transaction
 	for _, tx := range txList {
-		result := db.FirstOrCreate(&tx, tx)
+		// db.Where("timestamp == ? AND from == ? AND to == ? AND quantity == ?", tx.Timestamp, tx.From, tx.To, tx.Quantity).FirstOrCreate(&tx)
+		db.Where(models.Transaction{Timestamp: tx.Timestamp}).FirstOrCreate(&tx)
 		newTxList = append(newTxList, tx)
-		if result.RowsAffected == 1 {
-		}
+		// if result.RowsAffected == 1 {
+		// }
 	}
 
 	// Create tax lots based on txList, mb only use new ones?
-	taxLots := taxes.GetTaxLotsFromTxs(db, accountID, newTxList)
+	taxes.GetTaxLotsFromTxs(db, accountID, newTxList)
 	// Save tax lots to db
-	for _, taxLot := range taxLots {
-		db.FirstOrCreate(&taxLot, taxLot)
-	}
+	// for _, taxLot := range taxLots {
+	// 	db.FirstOrCreate(&taxLot, taxLot)
+	// }
 }
 
 func parseFloatOrZero(s string) float64 {
@@ -107,7 +108,7 @@ func handleBuySell(db *gorm.DB, accountID uint, line []string) models.Transactio
 	tx.Notes = line[9]
 
 	// Accounts
-	tx.FromID = accountID
+	tx.From = accountID
 	if line[1] == "Send" {
 		// Split string
 		externalID := strings.Split(line[9], "to ")[1]
@@ -140,7 +141,7 @@ func handleConvert(db *gorm.DB, accountID uint, line []string) []models.Transact
 	sellTx.Notes = line[9]
 
 	// Accounts
-	sellTx.FromID = accountID
+	sellTx.From = accountID
 
 	// Create buy tx
 	var buyTx models.Transaction
@@ -156,7 +157,7 @@ func handleConvert(db *gorm.DB, accountID uint, line []string) []models.Transact
 	buyTx.Notes = line[9]
 
 	// Accounts
-	buyTx.FromID = accountID
+	buyTx.From = accountID
 
 	return []models.Transaction{sellTx, buyTx}
 }
@@ -176,7 +177,7 @@ func handleReward(db *gorm.DB, accountID uint, line []string) models.Transaction
 	tx.Notes = line[9]
 
 	// Accounts
-	tx.FromID = accountID
+	tx.From = accountID
 
 	return tx
 }
