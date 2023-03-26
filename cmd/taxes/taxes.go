@@ -63,7 +63,7 @@ func GetTaxLotsFromTxs(db *gorm.DB, accountID uint, txList []models.Transaction)
 			taxLot.CostBasis = tx.Total / tx.Quantity
 
 			taxLotList = append(taxLotList, taxLot)
-			// db.Model(&tx).Association("TaxLots").Append(&taxLot)
+			// TODO: Fix taxlots getting assigned tx's way later than their taxlotsale.sellTx
 			db.Where("transaction_id == ?", tx.ID).FirstOrCreate(&taxLot)
 		} else if tx.Type == "sell" {
 			var associatedTaxLots []models.TaxLot
@@ -73,34 +73,32 @@ func GetTaxLotsFromTxs(db *gorm.DB, accountID uint, txList []models.Transaction)
 				var taxLot models.TaxLot
 				// TODO Make sure taxlot is before sell tx
 				result := db.Where("asset == ? AND is_sold == ?", tx.Asset, false).Order("Timestamp").First(&taxLot)
-				if result.Error == nil {
-					taxLotQuantityRemaining := taxLot.Quantity - taxLot.QuantityRealized
-					var quantitySold float64
-					if sellQuantity >= taxLotQuantityRemaining {
-						taxLot.QuantityRealized = taxLot.Quantity
-						taxLot.IsSold = true
-						db.Save(&taxLot)
-						sellQuantity -= taxLotQuantityRemaining
-						quantitySold = taxLotQuantityRemaining
-					} else {
-						taxLot.QuantityRealized += sellQuantity
-						db.Save(&taxLot)
-						quantitySold = sellQuantity
-						sellQuantity = 0
-					}
-					associatedTaxLots = append(associatedTaxLots, taxLot)
-					taxLotSales = append(taxLotSales, models.TaxLotSale{
-						TransactionID: tx.ID,
-						TaxLotID:      taxLot.ID,
-						QuantitySold:  quantitySold,
-					})
-				} else {
+				if result.Error != nil {
 					log.Println("Taxlot not found!")
+					break
+				}
+				taxLotQuantityRemaining := taxLot.Quantity - taxLot.QuantityRealized
+				var quantitySold float64
+				if sellQuantity >= taxLotQuantityRemaining {
+					taxLot.QuantityRealized = taxLot.Quantity
+					taxLot.IsSold = true
+					db.Save(&taxLot)
+					sellQuantity -= taxLotQuantityRemaining
+					quantitySold = taxLotQuantityRemaining
+				} else {
+					taxLot.QuantityRealized += sellQuantity
+					db.Save(&taxLot)
+					quantitySold = sellQuantity
 					sellQuantity = 0
 				}
+				associatedTaxLots = append(associatedTaxLots, taxLot)
+				taxLotSales = append(taxLotSales, models.TaxLotSale{
+					TransactionID: tx.ID,
+					TaxLotID:      taxLot.ID,
+					QuantitySold:  quantitySold,
+				})
 			}
 			db.Model(&tx).Association("TaxLots").Append(&associatedTaxLots)
-			// db.FirstOrCreate(&associatedTaxLots)
 			for _, taxLotSale := range taxLotSales {
 				db.FirstOrCreate(&taxLotSale, taxLotSale)
 			}
