@@ -3,6 +3,7 @@ package taxes
 import (
 	"crypto-tax-reporter/cmd/models"
 	"log"
+	"math"
 
 	"gorm.io/gorm"
 )
@@ -24,17 +25,26 @@ func CalculateAccountPNL(db *gorm.DB, account models.Account) float64 {
 	var pnl float64
 	// Get sell txs
 	var sellTxs []models.Transaction
-	db.Model(&account).Where("type = ?", "sell").Association("TxFroms").Find(&sellTxs)
+	db.Model(&account).Where("type = ?", "sell").Preload("TaxLotSales").Preload("TaxLotSales.TaxLot").Association("TxFroms").Find(&sellTxs)
 	log.Printf("Length of sell txs: %v", len(sellTxs))
-	// Calc PNL by (sell spot price - cost basis) * quantity
+	// Calc PNL by
 	for _, sellTx := range sellTxs {
 		log.Printf("Calculating tx %v", sellTx.ID)
 		for _, taxLotSale := range sellTx.TaxLotSales {
 			log.Printf("Calculating tlsale %v", taxLotSale.ID)
 			taxLot := taxLotSale.TaxLot
-			pnl += (sellTx.SpotPrice - taxLot.CostBasis) * taxLotSale.QuantitySold
+			saleTotal := sellTx.Total * taxLotSale.QuantitySold / sellTx.Quantity
+			saleCost := taxLot.CostBasis * taxLotSale.QuantitySold
+			salePNL := saleTotal - saleCost
+			// Round to nearest hundredth
+			salePNL = math.Round(100*salePNL) / 100
+			log.Printf("Sale PNL: %v", salePNL)
+			pnl += salePNL
 		}
 	}
+	// Round to nearest hundredth
+	pnl = math.Round(100*pnl) / 100
+	log.Printf("Calculated pnl of %v for account %v", pnl, account.ID)
 	return pnl
 }
 
@@ -50,7 +60,7 @@ func GetTaxLotsFromTxs(db *gorm.DB, accountID uint, txList []models.Transaction)
 			taxLot.Asset = tx.Asset
 			taxLot.Quantity = tx.Quantity
 			taxLot.Currency = tx.Currency
-			taxLot.CostBasis = tx.Total
+			taxLot.CostBasis = tx.Total / tx.Quantity
 
 			taxLotList = append(taxLotList, taxLot)
 			// db.Model(&tx).Association("TaxLots").Append(&taxLot)
@@ -75,8 +85,8 @@ func GetTaxLotsFromTxs(db *gorm.DB, accountID uint, txList []models.Transaction)
 					} else {
 						taxLot.QuantityRealized += sellQuantity
 						db.Save(&taxLot)
-						sellQuantity = 0
 						quantitySold = sellQuantity
+						sellQuantity = 0
 					}
 					associatedTaxLots = append(associatedTaxLots, taxLot)
 					taxLotSales = append(taxLotSales, models.TaxLotSale{
