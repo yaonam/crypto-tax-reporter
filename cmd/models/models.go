@@ -16,12 +16,12 @@ type User struct {
 	FirstName string    `json:"first_name"`
 	LastName  string    `json:"last_name"`
 	Email     string    `json:"email"`
-	Accounts  []Account `json:"accounts"`
+	Accounts  []Account `gorm:"foreignKey:User" json:"accounts"`
 }
 
 type Account struct {
 	gorm.Model
-	UserID     uint   `json:"user_id"`
+	User       uint   `json:"user"`
 	Type       string `json:"type"`
 	ExternalID string `json:"external_id"`
 
@@ -44,12 +44,10 @@ type Asset struct {
 
 type Transaction struct {
 	gorm.Model
-	Timestamp string `json:"timestamp"`
-	Type      string `json:"type"`
-	From      uint   `json:"from"`
-	// FromID    uint   `json:"from_id"`
-	// From      Account  `json:"from"`
-	To        uint     `json:"to"`
+	Timestamp string   `json:"timestamp"`
+	Type      string   `json:"type"`
+	From      uint     `json:"from"` // Account
+	To        uint     `json:"to"`   // Account
 	Asset     uint     `json:"asset"`
 	Quantity  float64  `json:"quantity"`
 	Currency  uint     `json:"currency"`
@@ -97,7 +95,7 @@ func MigrateModels(db *gorm.DB) {
 
 	newUser := User{FirstName: "Elim", LastName: "Poon", Email: "elim@gmail.com"}
 	db.FirstOrCreate(&newUser)
-	newAccount := Account{UserID: 1}
+	newAccount := Account{User: newUser.ID}
 	db.FirstOrCreate(&newAccount)
 	newTx := Transaction{From: newAccount.ID}
 	db.FirstOrCreate(&newTx)
@@ -121,7 +119,7 @@ func FindAssetOrCreate(db *gorm.DB, currency string) uint {
 }
 
 func FindAccountOrCreate(db *gorm.DB, userID uint, externalID string) uint {
-	account := Account{UserID: userID, ExternalID: externalID}
+	account := Account{User: userID, ExternalID: externalID}
 	db.FirstOrCreate(&account, account)
 	return account.ID
 }

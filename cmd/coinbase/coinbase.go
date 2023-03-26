@@ -39,12 +39,19 @@ func OpenFile(db *gorm.DB, accountID uint) {
 	// TODO: Query to find existing rows, remove from txList, then upload in 2nd query
 	var newTxList []models.Transaction
 	for _, tx := range txList {
-		// db.Where("timestamp == ? AND from == ? AND to == ? AND quantity == ?", tx.Timestamp, tx.From, tx.To, tx.Quantity).FirstOrCreate(&tx)
-		db.Where(models.Transaction{Timestamp: tx.Timestamp}).FirstOrCreate(&tx)
-		newTxList = append(newTxList, tx)
-		// if result.RowsAffected == 1 {
-		// }
+		// result := db.Where("timestamp == ? AND from == ? AND to == ? AND quantity == ?", tx.Timestamp, tx.From, tx.To, tx.Quantity).FirstOrCreate(&tx)
+		result := db.Where(&models.Transaction{
+			Timestamp: tx.Timestamp,
+			From:      tx.From,
+			To:        tx.To,
+			Quantity:  tx.Quantity,
+		}).FirstOrCreate(&tx, tx)
+		// result := db.Where(models.Transaction{Timestamp: tx.Timestamp}).FirstOrCreate(&tx)
+		if result.RowsAffected == 1 {
+			newTxList = append(newTxList, tx)
+		}
 	}
+	log.Printf("Found %v new transactions", len(newTxList))
 
 	// Create tax lots based on txList, mb only use new ones?
 	taxes.GetTaxLotsFromTxs(db, accountID, newTxList)
@@ -72,7 +79,7 @@ func parseTxList(db *gorm.DB, accountID uint, data [][]string) []models.Transact
 	var txList []models.Transaction
 	for i, line := range data {
 		if i > 0 { // skip headers
-			// TODO: Convert types to lowercase
+			// TODO: Handle send
 			// Handle based on type
 			switch txType := line[1]; txType {
 			case "Convert":

@@ -86,7 +86,7 @@ func postAccount(w http.ResponseWriter, r *http.Request) {
 	// Create
 	db.Create(&newAccount)
 
-	w.Write([]byte(fmt.Sprintf("Post account %v %v successful!", newAccount.ID, newAccount.UserID)))
+	w.Write([]byte(fmt.Sprintf("Post account %v %v successful!", newAccount.ID, newAccount.User)))
 }
 
 func getTransactions(w http.ResponseWriter, r *http.Request) {

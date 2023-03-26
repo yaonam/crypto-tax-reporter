@@ -32,7 +32,7 @@ func RunServer() {
 
 	// Dev, temp func calls
 	coinbase.OpenFile(db, 1)
-	pnl := taxes.CalculatePNL(db, 1)
+	pnl := taxes.CalculateUserPNL(db, 1)
 	log.Printf("PNL: %v", pnl)
 
 	r := chi.NewRouter()

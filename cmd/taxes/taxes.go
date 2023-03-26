@@ -7,11 +7,25 @@ import (
 	"gorm.io/gorm"
 )
 
-func CalculatePNL(db *gorm.DB, userID uint) float64 {
+func CalculateUserPNL(db *gorm.DB, userID uint) float64 {
+	var pnl float64
+	// Get sell txs
+	var userAccounts []models.Account
+	db.Where("user = ?", userID).Find(&userAccounts)
+	log.Printf("Length of user's account: %v", len(userAccounts))
+	for _, account := range userAccounts {
+		log.Printf("Calculating pnl for account %v", account.ID)
+		pnl += CalculateAccountPNL(db, account)
+	}
+	return pnl
+}
+
+func CalculateAccountPNL(db *gorm.DB, account models.Account) float64 {
 	var pnl float64
 	// Get sell txs
 	var sellTxs []models.Transaction
-	db.Where("from_id == ? AND type == ?", userID, "sell").Preload("TaxLotSales").Preload("TaxLotSales.TaxLot").Find(&sellTxs)
+	db.Model(&account).Where("type = ?", "sell").Association("TxFroms").Find(&sellTxs)
+	log.Printf("Length of sell txs: %v", len(sellTxs))
 	// Calc PNL by (sell spot price - cost basis) * quantity
 	for _, sellTx := range sellTxs {
 		log.Printf("Calculating tx %v", sellTx.ID)
@@ -48,27 +62,32 @@ func GetTaxLotsFromTxs(db *gorm.DB, accountID uint, txList []models.Transaction)
 			for sellQuantity := tx.Quantity; sellQuantity > 0; {
 				var taxLot models.TaxLot
 				// TODO Make sure taxlot is before sell tx
-				db.Where("asset == ? AND is_sold == ?", tx.Asset, false).Order("Timestamp").First(&taxLot)
-				taxLotQuantityRemaining := taxLot.Quantity - taxLot.QuantityRealized
-				var quantitySold float64
-				if sellQuantity >= taxLotQuantityRemaining {
-					taxLot.QuantityRealized = taxLot.Quantity
-					taxLot.IsSold = true
-					db.Save(&taxLot)
-					sellQuantity -= taxLotQuantityRemaining
-					quantitySold = taxLotQuantityRemaining
+				result := db.Where("asset == ? AND is_sold == ?", tx.Asset, false).Order("Timestamp").First(&taxLot)
+				if result.Error == nil {
+					taxLotQuantityRemaining := taxLot.Quantity - taxLot.QuantityRealized
+					var quantitySold float64
+					if sellQuantity >= taxLotQuantityRemaining {
+						taxLot.QuantityRealized = taxLot.Quantity
+						taxLot.IsSold = true
+						db.Save(&taxLot)
+						sellQuantity -= taxLotQuantityRemaining
+						quantitySold = taxLotQuantityRemaining
+					} else {
+						taxLot.QuantityRealized += sellQuantity
+						db.Save(&taxLot)
+						sellQuantity = 0
+						quantitySold = sellQuantity
+					}
+					associatedTaxLots = append(associatedTaxLots, taxLot)
+					taxLotSales = append(taxLotSales, models.TaxLotSale{
+						TransactionID: tx.ID,
+						TaxLotID:      taxLot.ID,
+						QuantitySold:  quantitySold,
+					})
 				} else {
-					taxLot.QuantityRealized += sellQuantity
-					db.Save(&taxLot)
+					log.Println("Taxlot not found!")
 					sellQuantity = 0
-					quantitySold = sellQuantity
 				}
-				associatedTaxLots = append(associatedTaxLots, taxLot)
-				taxLotSales = append(taxLotSales, models.TaxLotSale{
-					TransactionID: tx.ID,
-					TaxLotID:      taxLot.ID,
-					QuantitySold:  quantitySold,
-				})
 			}
 			db.Model(&tx).Association("TaxLots").Append(&associatedTaxLots)
 			// db.FirstOrCreate(&associatedTaxLots)
