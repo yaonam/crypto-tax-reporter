@@ -19,3 +19,5 @@
 
 # csv stuff
 csv/
+
+.env
