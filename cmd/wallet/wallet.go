@@ -2,6 +2,7 @@ package wallet
 
 import (
 	"bytes"
+	"crypto-tax-reporter/cmd/models"
 	"encoding/json"
 	"io"
 	"log"
@@ -44,16 +45,27 @@ func getTransfers() {
 		log.Fatal(toBodyErr)
 	}
 	toResp.Body.Close()
-	log.Print(string(toBody))
-	// if jsonErr := json.Unmarshal(body, &allApartments); jsonErr != nil {
-	// 	log.Fatal(jsonErr)
-	// }
+	var toTransfers []models.Transaction
+	if jsonErr := json.Unmarshal(toBody, &toTransfers); jsonErr != nil {
+		log.Fatal(jsonErr)
+	}
+	log.Print(json.MarshalIndent(toTransfers[0], "", "  "))
 
 	// toJson, toJsonErr := json.Marshal(&toResp)
 	// if toJsonErr != nil {
 	// 	log.Fatal(toJsonErr)
 	// }
 	// log.Print(toJson)
+}
+
+func parseTransfers(transfers *[]byte) []models.Transaction {
+	var result []models.Transaction
+	for _, transfer := range *transfers {
+		var tx models.Transaction
+		tx.Type = "send"
+		tx.Quantity = float64(transfer["value4"])
+	}
+	return result
 }
 
 // func getTxsFromTransfers()
