@@ -13,19 +13,38 @@ import (
 )
 
 const AlchemyApiUrl = "https://eth-mainnet.g.alchemy.com/v2/"
+const DefaultAsset = "USD"
+
+type AlchemyTransfer struct {
+	Timestamp string  `json:"metadata.blockTimestamp"`
+	From      string  `json:"from"` // Account
+	To        string  `json:"to"`   // Account
+	Asset     string  `json:"asset"`
+	Quantity  float64 `json:"value"`
+	Currency  uint    `json:"currency"`
+	Notes     string  `json:"hash"`
+}
+
+type AlchemyResponse struct {
+	Result struct {
+		Transfers []AlchemyTransfer `json:"transfers"`
+	} `json:"result"`
+}
 
 func Import(db *gorm.DB, address string) {
 	log.Print("Importing wallet")
-	getTransfers()
+	alchTransfers := getTransfers("0x844e94FC29D39840229F6E47290CbE73f187c3b1")
+	txs := convertToTx(db, 1, &alchTransfers)
+	log.Print(txs)
 }
 
-func getTransfers() {
-	// Fetch external, internal, and erc20 transfers from Alchemy
+// Calls Alchemy API to get token transfers for account
+func getTransfers(walletAddress string) []AlchemyTransfer {
 	// Set address as To and From
 	AlchemyApiKey := os.Getenv("ALCHEMY_API_KEY")
 
 	toParams := map[string]interface{}{
-		"fromAddress":  "0x844e94FC29D39840229F6E47290CbE73f187c3b1",
+		"fromAddress":  walletAddress,
 		"category":     []string{"external", "internal", "erc20"},
 		"withMetadata": true,
 	}
@@ -41,31 +60,36 @@ func getTransfers() {
 		log.Fatal("Fetch 'to' transfers from Alchemy failed")
 	}
 	toBody, toBodyErr := io.ReadAll(toResp.Body)
+	toResp.Body.Close()
 	if toBodyErr != nil {
 		log.Fatal(toBodyErr)
 	}
-	toResp.Body.Close()
-	var toTransfers []models.Transaction
-	if jsonErr := json.Unmarshal(toBody, &toTransfers); jsonErr != nil {
-		log.Fatal(jsonErr)
-	}
-	log.Print(json.MarshalIndent(toTransfers[0], "", "  "))
 
-	// toJson, toJsonErr := json.Marshal(&toResp)
-	// if toJsonErr != nil {
-	// 	log.Fatal(toJsonErr)
-	// }
-	// log.Print(toJson)
+	// Parse data
+	var alchResp AlchemyResponse
+	rawErr := json.Unmarshal(toBody, &alchResp)
+	if rawErr != nil {
+		log.Fatal(rawErr)
+	}
+
+	return alchResp.Result.Transfers
 }
 
-func parseTransfers(transfers *[]byte) []models.Transaction {
-	var result []models.Transaction
-	for _, transfer := range *transfers {
-		var tx models.Transaction
-		tx.Type = "send"
-		tx.Quantity = float64(transfer["value4"])
+// Convert AlchemyTransfer to models.Transaction
+func convertToTx(db *gorm.DB, userID uint, alchTransfers *[]AlchemyTransfer) []models.Transaction {
+	// Convert back to Transaction type
+	txs := make([]models.Transaction, len(*alchTransfers))
+	for i, tf := range *alchTransfers {
+		tx := models.Transaction{
+			Timestamp: tf.Timestamp,
+			Type:      "send",
+			From:      models.FindAccountOrCreate(db, userID, tf.From),
+			To:        models.FindAccountOrCreate(db, userID, tf.To),
+			Asset:     models.FindAssetOrCreate(db, DefaultAsset),
+			Quantity:  tf.Quantity,
+			Notes:     tf.Notes,
+		}
+		txs[i] = models.Transaction(tx)
 	}
-	return result
+	return txs
 }
-
-// func getTxsFromTransfers()
