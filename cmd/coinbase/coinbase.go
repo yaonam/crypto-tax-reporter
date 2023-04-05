@@ -14,8 +14,8 @@ import (
 	"crypto-tax-reporter/cmd/taxes"
 )
 
-func OpenFile(db *gorm.DB, accountID uint) {
-	f, err := os.Open("csv/data.csv")
+func Import(db *gorm.DB, accountID uint, filePath string) {
+	f, err := os.Open(filePath)
 	if err != nil {
 		log.Fatal(err)
 	}
