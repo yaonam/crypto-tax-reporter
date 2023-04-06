@@ -24,12 +24,15 @@ type AlchemyTransfer struct {
 	Metadata struct {
 		Timestamp time.Time `json:"blockTimestamp"`
 	} `json:"metadata"`
-	From     string          `json:"from"` // Account
-	To       string          `json:"to"`   // Account
-	Asset    LowercaseString `json:"asset"`
-	Quantity float64         `json:"value"`
-	Currency uint            `json:"currency"`
-	Notes    string          `json:"hash"`
+	From        string          `json:"from"`
+	To          string          `json:"to"`
+	Quantity    float64         `json:"value"`
+	Asset       LowercaseString `json:"asset"`
+	Category    string          `json:"category"`
+	RawContract struct {
+		Address string `json:"address"`
+	} `json:"rawContract"`
+	Notes string `json:"hash"`
 }
 
 type AlchemyTransfers []AlchemyTransfer
@@ -77,9 +80,11 @@ func Import(db *gorm.DB, userID uint, address string) {
 	alchTransfers.filterUnapproved(approvedTokens)
 
 	log.Printf("Converting %v transfers to txs", len(alchTransfers))
-	txs := convertToTx(db, userID, &alchTransfers, approvedTokens)
-	prettyTxs, _ := json.MarshalIndent(txs, "", "  ")
-	log.Print("Transactions: ", string(prettyTxs))
+	convertToTx(db, userID, &alchTransfers, approvedTokens)
+	// txs := convertToTx(db, userID, &alchTransfers, approvedTokens)
+	// prettyTxs, _ := json.MarshalIndent(txs, "", "  ")
+	// log.Print("Transactions: ", string(prettyTxs))
+
 }
 
 func (s *LowercaseString) UnmarshalJSON(data []byte) error {
@@ -148,6 +153,8 @@ func (transfers *AlchemyTransfers) filterUnapproved(approvedTokens *ApprovedToke
 	for _, transfer := range *transfers {
 		if approvedTokens.Mapping[string(transfer.Asset)] != "" {
 			filteredTransfers = append(filteredTransfers, transfer)
+		} else {
+			log.Print("Unapproved token: ", string(transfer.Asset))
 		}
 	}
 	*transfers = filteredTransfers
