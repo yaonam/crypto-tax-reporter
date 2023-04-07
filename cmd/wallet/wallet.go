@@ -25,10 +25,15 @@ type AlchemyTransfer struct {
 	Metadata struct {
 		Timestamp time.Time `json:"blockTimestamp"`
 	} `json:"metadata"`
+	Type        string          `json:"type"`
 	From        string          `json:"from"`
 	To          string          `json:"to"`
 	Quantity    float64         `json:"value"`
 	Asset       LowercaseString `json:"asset"`
+	SpotPrice   float64         `json:"spot_price"`
+	Subtotal    float64         `json:"subtotal"`
+	Total       float64         `json:"total"`
+	Fees        float64         `json:"fees"`
 	Category    string          `json:"category"`
 	RawContract struct {
 		Address string `json:"address"`
@@ -80,8 +85,11 @@ func Import(db *gorm.DB, userID uint, address string) {
 	log.Printf("Filtering %v transfers by approved tokens", len(alchTransfers))
 	alchTransfers.filterUnapproved(approvedTokens)
 
+	log.Print("Fetching spot prices")
+	alchTransfers.getSpotPrices(approvedTokens)
+
 	log.Printf("Matching %v transfers", len(alchTransfers))
-	alchTransfers.matchTransfers()
+	alchTransfers.matchTransfers(address)
 
 	log.Printf("Converting %v transfers to txs", len(alchTransfers))
 	convertToTx(db, userID, &alchTransfers, approvedTokens)
@@ -157,8 +165,6 @@ func (transfers *AlchemyTransfers) filterUnapproved(approvedTokens *ApprovedToke
 	for _, transfer := range *transfers {
 		if approvedTokens.Mapping[string(transfer.Asset)] != "" {
 			filteredTransfers = append(filteredTransfers, transfer)
-		} else {
-			log.Print("Unapproved token: ", string(transfer.Asset))
 		}
 	}
 	*transfers = filteredTransfers
@@ -194,6 +200,7 @@ type CoinGeckoResponse struct {
 }
 
 // Fetch spot price from coingecko
+// TODO: Refactor to set *tf's spotprice instead of returning
 func (tf *AlchemyTransfer) getSpotPrice(approvedTokens *ApprovedTokens) float64 {
 	tokenID := approvedTokens.Mapping[string(tf.Asset)]
 	date := tf.Metadata.Timestamp.Format("02-01-2006")
@@ -217,24 +224,76 @@ func (tf *AlchemyTransfer) getSpotPrice(approvedTokens *ApprovedTokens) float64 
 	return coinGeckoResponse.MarketData.CurrentPrice.USD
 }
 
-func (txs *AlchemyTransfers) Len() int {
-	return len(*txs)
-}
-func (txs *AlchemyTransfers) Less(i, j int) bool {
-	return (*txs)[i].Notes < (*txs)[j].Notes
-}
-func (txs *AlchemyTransfers) Swap(i, j int) {
-	tempAlchTransfer := (*txs)[i]
-	(*txs)[i] = (*txs)[j]
-	(*txs)[i] = tempAlchTransfer
+// Fetch spot prices
+func (tfs *AlchemyTransfers) getSpotPrices(approvedTokens *ApprovedTokens) {
+	for i, tf := range *tfs {
+		(*tfs)[i].SpotPrice = tf.getSpotPrice(approvedTokens)
+	}
 }
 
-func (tfs *AlchemyTransfers) matchTransfers() {
-	before, _ := json.MarshalIndent(*tfs, "", "  ")
-	// TODO: Sort by date, then note (tx hash)
-	log.Print(string(before))
+func (tfs *AlchemyTransfers) Len() int {
+	return len(*tfs)
+}
+
+// Sort by timestamp and then tx hash (notes)
+func (tfs *AlchemyTransfers) Less(i, j int) bool {
+	if (*tfs)[i].Metadata.Timestamp.Before((*tfs)[j].Metadata.Timestamp) {
+		return true
+	} else if (*tfs)[i].Metadata.Timestamp.Equal((*tfs)[j].Metadata.Timestamp) && (*tfs)[i].Notes < (*tfs)[j].Notes {
+		return true
+	}
+	return false
+}
+func (tfs *AlchemyTransfers) Swap(i, j int) {
+	log.Printf("Swapping tfs %v and %v", i, j)
+	(*tfs)[i], (*tfs)[j] = (*tfs)[j], (*tfs)[i]
+}
+
+// Match transfers into buy/sell pairs and correct missing info.
+func (tfs *AlchemyTransfers) matchTransfers(address string) {
+	// before, _ := json.MarshalIndent(*tfs, "", "  ")
+	// log.Print(string(before))
 	sort.Sort(tfs)
 	after, _ := json.MarshalIndent(*tfs, "", "  ")
 	log.Print(string(after))
 	// Iterate through them, match if same hash and to/from pair
+	var matchedTfIDs []int
+	for i, tf := range *tfs {
+		if len(matchedTfIDs) == 0 || tf.Notes == (*tfs)[matchedTfIDs[0]].Notes {
+			// Empty or matched, add to slice
+			matchedTfIDs = append(matchedTfIDs, i)
+		} else {
+			// Doesn't match, process matched and reset
+			tfs.handleMatchedTfs(matchedTfIDs, address)
+
+			matchedTfIDs = []int{}
+		}
+	}
+}
+
+func (tfs *AlchemyTransfers) handleMatchedTfs(matchedTfIDs []int, address string) {
+	var missingSpotPriceCount uint
+	var missingSpotPriceID uint
+	var total int
+	for i, tf := range *tfs {
+		// Pair: Set from-sell, to-buy
+		if tf.To == address {
+			(*tfs)[i].Type = "buy"
+		} else {
+			(*tfs)[i].Type = "sell"
+		}
+		// Keep track of total
+		if tf.SpotPrice == 0 {
+			missingSpotPriceCount += 1
+			missingSpotPriceID = uint(i)
+		} else if tf.To == address {
+			total += int(tf.Quantity) * int(tf.SpotPrice)
+		} else {
+			total -= int(tf.Quantity) * int(tf.SpotPrice)
+		}
+	}
+	// Try to fill in missing spot prices using total
+	if missingSpotPriceCount == 1 {
+		(*tfs)[missingSpotPriceID].SpotPrice = float64(total) / (*tfs)[missingSpotPriceID].Quantity
+	}
 }

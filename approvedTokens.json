@@ -1,8 +1,6 @@
 {
     "mapping": {
-        "eth": "ethereum",
         "kap": "kapital-dao",
-        "steth": "lido-staked-ether",
         "usdc": "usd-coin"
     }
 }
