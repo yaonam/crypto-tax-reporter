@@ -3,7 +3,6 @@
         "eth": "ethereum",
         "kap": "kapital-dao",
         "steth": "lido-staked-ether",
-        "storj": "storj",
         "usdc": "usd-coin"
     }
 }

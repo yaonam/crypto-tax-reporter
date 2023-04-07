@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sort"
 	"strings"
 	"time"
 
@@ -78,6 +79,9 @@ func Import(db *gorm.DB, userID uint, address string) {
 
 	log.Printf("Filtering %v transfers by approved tokens", len(alchTransfers))
 	alchTransfers.filterUnapproved(approvedTokens)
+
+	log.Printf("Matching %v transfers", len(alchTransfers))
+	alchTransfers.matchTransfers()
 
 	log.Printf("Converting %v transfers to txs", len(alchTransfers))
 	convertToTx(db, userID, &alchTransfers, approvedTokens)
@@ -211,4 +215,26 @@ func (tf *AlchemyTransfer) getSpotPrice(approvedTokens *ApprovedTokens) float64 
 	}
 
 	return coinGeckoResponse.MarketData.CurrentPrice.USD
+}
+
+func (txs *AlchemyTransfers) Len() int {
+	return len(*txs)
+}
+func (txs *AlchemyTransfers) Less(i, j int) bool {
+	return (*txs)[i].Notes < (*txs)[j].Notes
+}
+func (txs *AlchemyTransfers) Swap(i, j int) {
+	tempAlchTransfer := (*txs)[i]
+	(*txs)[i] = (*txs)[j]
+	(*txs)[i] = tempAlchTransfer
+}
+
+func (tfs *AlchemyTransfers) matchTransfers() {
+	before, _ := json.MarshalIndent(*tfs, "", "  ")
+	// TODO: Sort by date, then note (tx hash)
+	log.Print(string(before))
+	sort.Sort(tfs)
+	after, _ := json.MarshalIndent(*tfs, "", "  ")
+	log.Print(string(after))
+	// Iterate through them, match if same hash and to/from pair
 }
