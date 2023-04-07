@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"net/http"
 	"os"
 	"sort"
@@ -275,7 +276,8 @@ func (tfs *AlchemyTransfers) handleMatchedTfs(matchedTfIDs []int, address string
 	var missingSpotPriceCount uint
 	var missingSpotPriceID uint
 	var total int
-	for i, tf := range *tfs {
+	for _, i := range matchedTfIDs {
+		tf := (*tfs)[i]
 		// Pair: Set from-sell, to-buy
 		if tf.To == address {
 			(*tfs)[i].Type = "buy"
@@ -284,16 +286,19 @@ func (tfs *AlchemyTransfers) handleMatchedTfs(matchedTfIDs []int, address string
 		}
 		// Keep track of total
 		if tf.SpotPrice == 0 {
+			log.Print(missingSpotPriceCount, missingSpotPriceID)
 			missingSpotPriceCount += 1
 			missingSpotPriceID = uint(i)
 		} else if tf.To == address {
-			total += int(tf.Quantity) * int(tf.SpotPrice)
+			missingSpotPriceCount = 0
+			total += int((*tfs)[i].Quantity) * int((*tfs)[i].SpotPrice)
 		} else {
-			total -= int(tf.Quantity) * int(tf.SpotPrice)
+			missingSpotPriceCount = 0
+			total -= int((*tfs)[i].Quantity) * int((*tfs)[i].SpotPrice)
 		}
 	}
 	// Try to fill in missing spot prices using total
 	if missingSpotPriceCount == 1 {
-		(*tfs)[missingSpotPriceID].SpotPrice = float64(total) / (*tfs)[missingSpotPriceID].Quantity
+		(*tfs)[missingSpotPriceID].SpotPrice = math.Abs(float64(total) / (*tfs)[missingSpotPriceID].Quantity)
 	}
 }
