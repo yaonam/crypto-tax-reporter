@@ -26,7 +26,7 @@ func RunServer() {
 	models.MigrateModels(db)
 
 	// Dev, temp func calls
-	wallet.Import(db, 1, "bleh")
+	wallet.Import(db, 1, "0x844e94FC29D39840229F6E47290CbE73f187c3b1")
 
 	// coinbase.OpenFile(db, 1, "csv/data.csv")
 	// pnl := taxes.CalculateUserPNL(db, 1)

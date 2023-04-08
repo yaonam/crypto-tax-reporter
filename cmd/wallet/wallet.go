@@ -81,10 +81,13 @@ func Import(db *gorm.DB, userID uint, address string) {
 	approvedTokens := loadApprovedTokens()
 
 	log.Print("Importing wallet")
-	alchTransfers := getTransfers("0x844e94FC29D39840229F6E47290CbE73f187c3b1")
+	alchTransfers := getTransfers(address)
 
 	log.Printf("Filtering %v transfers by approved tokens", len(alchTransfers))
 	alchTransfers.filterUnapproved(approvedTokens)
+
+	log.Print("Assigning types")
+	alchTransfers.assignTypes(db, userID)
 
 	log.Print("Fetching spot prices")
 	alchTransfers.getSpotPrices(approvedTokens)
@@ -171,6 +174,31 @@ func (transfers *AlchemyTransfers) filterUnapproved(approvedTokens *ApprovedToke
 	*transfers = filteredTransfers
 }
 
+// Assign types based on to/from addresses
+func (tfs *AlchemyTransfers) assignTypes(db *gorm.DB, userID uint) {
+	// Get user's accounts from db
+	var userAccounts []models.Account
+	db.Where("user = ?", userID).Find(&userAccounts)
+
+	// Create a map of wallet addresses
+	userWallets := make(map[string]bool)
+	for _, account := range userAccounts {
+		userWallets[account.ExternalID] = true
+	}
+
+	// Iterate over transfers and assign types
+	for _, tf := range *tfs {
+		to, from := userWallets[tf.To], userWallets[tf.From]
+		if to && from {
+			tf.Type = "send"
+		} else if to {
+			tf.Type = "buy"
+		} else if from {
+			tf.Type = "sell"
+		}
+	}
+}
+
 // Convert AlchemyTransfer to models.Transaction
 func convertToTx(db *gorm.DB, userID uint, alchTransfers *AlchemyTransfers, approvedTokens *ApprovedTokens) []models.Transaction {
 	// Convert back to Transaction type
@@ -206,9 +234,19 @@ func (tf *AlchemyTransfer) getSpotPrice(approvedTokens *ApprovedTokens) float64 
 	tokenID := approvedTokens.Mapping[string(tf.Asset)]
 	date := tf.Metadata.Timestamp.Format("02-01-2006")
 	coinGeckoURL := fmt.Sprintf("https://api.coingecko.com/api/v3/coins/%v/history?date=%v&localization=false", tokenID, date)
-	resp, err := http.Get(coinGeckoURL)
-	if err != nil {
-		log.Fatal(err)
+	var resp *http.Response
+	// TODO: Write a generic rate limited request handler
+	for {
+		var err error
+		resp, err = http.Get(coinGeckoURL)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if resp.StatusCode == 200 || resp.StatusCode != 429 {
+			break
+		}
+		// Try again in 1s if rate limited
+		time.Sleep(1)
 	}
 	body, bodyErr := io.ReadAll(resp.Body)
 	if bodyErr != nil {
@@ -217,7 +255,7 @@ func (tf *AlchemyTransfer) getSpotPrice(approvedTokens *ApprovedTokens) float64 
 	resp.Body.Close()
 
 	var coinGeckoResponse CoinGeckoResponse
-	err = json.Unmarshal(body, &coinGeckoResponse)
+	err := json.Unmarshal(body, &coinGeckoResponse)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -255,8 +293,6 @@ func (tfs *AlchemyTransfers) matchTransfers(address string) {
 	// before, _ := json.MarshalIndent(*tfs, "", "  ")
 	// log.Print(string(before))
 	sort.Sort(tfs)
-	after, _ := json.MarshalIndent(*tfs, "", "  ")
-	log.Print(string(after))
 	// Iterate through them, match if same hash and to/from pair
 	var matchedTfIDs []int
 	for i, tf := range *tfs {
@@ -267,23 +303,29 @@ func (tfs *AlchemyTransfers) matchTransfers(address string) {
 			// Doesn't match, process matched and reset
 			tfs.handleMatchedTfs(matchedTfIDs, address)
 
-			matchedTfIDs = []int{}
+			matchedTfIDs = []int{i}
 		}
 	}
+	after, _ := json.MarshalIndent(*tfs, "", "  ")
+	log.Print(string(after))
 }
 
 func (tfs *AlchemyTransfers) handleMatchedTfs(matchedTfIDs []int, address string) {
+	if len(matchedTfIDs) <= 1 {
+		return
+	}
+	log.Print(matchedTfIDs)
 	var missingSpotPriceCount uint
 	var missingSpotPriceID uint
 	var total int
 	for _, i := range matchedTfIDs {
 		tf := (*tfs)[i]
-		// Pair: Set from-sell, to-buy
-		if tf.To == address {
-			(*tfs)[i].Type = "buy"
-		} else {
-			(*tfs)[i].Type = "sell"
-		}
+		// // Pair: Set from-sell, to-buy
+		// if tf.To == address {
+		// 	tf.Type = "buy"
+		// } else {
+		// 	tf.Type = "sell"
+		// }
 		// Keep track of total
 		if tf.SpotPrice == 0 {
 			log.Print(missingSpotPriceCount, missingSpotPriceID)
@@ -291,10 +333,10 @@ func (tfs *AlchemyTransfers) handleMatchedTfs(matchedTfIDs []int, address string
 			missingSpotPriceID = uint(i)
 		} else if tf.To == address {
 			missingSpotPriceCount = 0
-			total += int((*tfs)[i].Quantity) * int((*tfs)[i].SpotPrice)
+			total += int(tf.Quantity) * int(tf.SpotPrice)
 		} else {
 			missingSpotPriceCount = 0
-			total -= int((*tfs)[i].Quantity) * int((*tfs)[i].SpotPrice)
+			total -= int(tf.Quantity) * int(tf.SpotPrice)
 		}
 	}
 	// Try to fill in missing spot prices using total
