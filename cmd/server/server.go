@@ -6,6 +6,7 @@ import (
 
 	"github.com/glebarez/sqlite" // Pure go driver, doesn't need cgo
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 
 	"crypto-tax-reporter/cmd/models"
 	"crypto-tax-reporter/cmd/wallet"
@@ -17,7 +18,7 @@ func RunServer() {
 	log.SetOutput(os.Stdout)
 	os.Remove("test.db")
 	var err error
-	db, err = gorm.Open(sqlite.Open("test.db"), &gorm.Config{})
+	db, err = gorm.Open(sqlite.Open("test.db"), &gorm.Config{Logger: logger.Default.LogMode(logger.Silent)})
 	if err != nil {
 		panic("failed to connect database")
 	}

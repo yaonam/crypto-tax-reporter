@@ -29,7 +29,8 @@ type ApprovedTokens struct {
 // Imports token transfers from eth address
 func Import(db *gorm.DB, userID uint, address string) {
 	// Assign account to user
-	models.AssignAccountToUser(db, userID, address)
+	account := models.Account{User: userID, Type: "wallet", ExternalID: address}
+	models.AssignAccountToUser(db, userID, account)
 
 	log.Print("Loading approved tokens")
 	approvedTokens := loadApprovedTokens()
@@ -136,12 +137,13 @@ func (transfers *AlchemyTransfers) filterUnapproved(approvedTokens *ApprovedToke
 func convertToTx(db *gorm.DB, userID uint, alchTransfers *AlchemyTransfers, approvedTokens *ApprovedTokens) []models.Transaction {
 	// Convert back to Transaction type
 	txs := make([]models.Transaction, len(*alchTransfers))
+	a := models.Account{User: userID, Type: "wallet"}
 	for i, tf := range *alchTransfers {
 		tx := models.Transaction{
 			Timestamp: tf.Metadata.Timestamp.String(),
 			Type:      "send",
-			From:      models.FindAccountOrCreate(db, tf.From),
-			To:        models.FindAccountOrCreate(db, tf.To),
+			From:      models.FindAccountOrCreate(db, models.Account{User: a.User, Type: a.Type, ExternalID: tf.From}),
+			To:        models.FindAccountOrCreate(db, models.Account{User: a.User, Type: a.Type, ExternalID: tf.To}),
 			Asset:     models.FindAssetOrCreate(db, string(tf.Asset)),
 			Quantity:  tf.Quantity,
 			Currency:  models.FindAssetOrCreate(db, DefaultAsset),

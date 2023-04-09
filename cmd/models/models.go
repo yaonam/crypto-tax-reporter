@@ -119,18 +119,24 @@ func FindAssetOrCreate(db *gorm.DB, currency string) uint {
 }
 
 // Finds or creates the account with externalID and then assigns to user
-func AssignAccountToUser(db *gorm.DB, userID uint, externalID string) {
-	accountID := FindAccountOrCreate(db, externalID)
-	var account Account
+func AssignAccountToUser(db *gorm.DB, userID uint, account Account) {
+	account.User = 0 // Make sure account isn't already assigned
+	accountID := FindAccountOrCreate(db, account)
 	db.First(&account, accountID)
 	account.User = userID
 	db.Save(&account)
 }
 
 // Looks for the account under the user
-func FindAccountOrCreate(db *gorm.DB, externalID string) uint {
-	account := Account{ExternalID: externalID}
-	db.FirstOrCreate(&account, account)
+func FindAccountOrCreate(db *gorm.DB, account Account) uint {
+	if result := db.First(&account, account); result.Error == gorm.ErrRecordNotFound {
+		account.User = 0 // Defer to "default" user
+		if result := db.FirstOrCreate(&account, account); result.Error != nil && result.Error != gorm.ErrRecordNotFound {
+			log.Fatal(result.Error)
+		}
+	} else if result.Error != nil {
+		log.Fatal(result.Error)
+	}
 	return account.ID
 }
 

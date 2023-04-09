@@ -14,7 +14,7 @@ import (
 	"crypto-tax-reporter/cmd/taxes"
 )
 
-func Import(db *gorm.DB, accountID uint, filePath string) {
+func Import(db *gorm.DB, userID uint, filePath string) {
 	f, err := os.Open(filePath)
 	if err != nil {
 		log.Fatal(err)
@@ -31,8 +31,12 @@ func Import(db *gorm.DB, accountID uint, filePath string) {
 	}
 	f.Close()
 
+	// Get or create coinbase account for user
+	account := models.Account{User: userID, Type: "coinbase"}
+	models.FindAccountOrCreate(db, account)
+
 	// convert records to array of structs
-	txList := parseTxList(db, accountID, data)
+	txList := parseTxList(db, userID, account.ID, data)
 	log.Printf("Parsed %v transactions", len(txList))
 
 	// save the array to db
@@ -54,7 +58,7 @@ func Import(db *gorm.DB, accountID uint, filePath string) {
 	log.Printf("Found %v new transactions", len(newTxList))
 
 	// Create tax lots based on txList, mb only use new ones?
-	taxes.GetTaxLotsFromTxs(db, accountID, newTxList)
+	taxes.GetTaxLotsFromTxs(db, account.ID, newTxList)
 	// Save tax lots to db
 	// for _, taxLot := range taxLots {
 	// 	db.FirstOrCreate(&taxLot, taxLot)
@@ -75,7 +79,7 @@ func parseUintOrZero(s string) uint {
 	return 0
 }
 
-func parseTxList(db *gorm.DB, accountID uint, data [][]string) []models.Transaction {
+func parseTxList(db *gorm.DB, userID uint, accountID uint, data [][]string) []models.Transaction {
 	var txList []models.Transaction
 	for i, line := range data {
 		if i > 0 { // skip headers
@@ -87,14 +91,14 @@ func parseTxList(db *gorm.DB, accountID uint, data [][]string) []models.Transact
 			case "Learning Reward":
 				txList = append(txList, handleReward(db, accountID, line))
 			default:
-				txList = append(txList, handleBuySell(db, accountID, line))
+				txList = append(txList, handleBuySell(db, userID, accountID, line))
 			}
 		}
 	}
 	return txList
 }
 
-func handleBuySell(db *gorm.DB, accountID uint, line []string) models.Transaction {
+func handleBuySell(db *gorm.DB, userID uint, accountID uint, line []string) models.Transaction {
 	// Coinbase columns
 	var tx models.Transaction
 	tx.Timestamp = line[0]
@@ -119,7 +123,7 @@ func handleBuySell(db *gorm.DB, accountID uint, line []string) models.Transactio
 	if line[1] == "Send" {
 		// Split string
 		externalID := strings.Split(line[9], "to ")[1]
-		tx.To = models.FindAccountOrCreate(db, externalID)
+		tx.To = models.FindAccountOrCreate(db, models.Account{User: userID, Type: "wallet", ExternalID: externalID})
 	}
 
 	return tx
