@@ -8,6 +8,8 @@ import (
 	"gorm.io/gorm"
 )
 
+// TODO: Add a function that looks for sends between accounts (cb, wallet)
+
 func CalculateUserPNL(db *gorm.DB, userID uint) float64 {
 	var pnl float64
 	// Get sell txs

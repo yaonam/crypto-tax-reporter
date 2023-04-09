@@ -127,6 +127,7 @@ func AssignAccountToUser(db *gorm.DB, userID uint, externalID string) {
 	db.Save(&account)
 }
 
+// Looks for the account under the user
 func FindAccountOrCreate(db *gorm.DB, externalID string) uint {
 	account := Account{ExternalID: externalID}
 	db.FirstOrCreate(&account, account)
