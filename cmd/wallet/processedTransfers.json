@@ -1,0 +1,173 @@
+[
+    {
+        "metadata": {
+            "blockTimestamp": "2022-10-06T22:19:23Z"
+        },
+        "type": "",
+        "from": "0xba12222222228d8ba445958a75a0704d566bf2c8",
+        "to": "0x844e94fc29d39840229f6e47290cbe73f187c3b1",
+        "value": 5736.577560261136,
+        "asset": "kap",
+        "spot_price": 0,
+        "subtotal": 0,
+        "total": 0,
+        "fees": 0,
+        "category": "erc20",
+        "rawContract": {
+            "address": "0x9625ce7753ace1fa1865a47aae2c5c2ce4418569"
+        },
+        "hash": "0x5f093f3a034372d56b24b615823161f0206adc5421c13f3ba63f9d3d60830d66"
+    },
+    {
+        "metadata": {
+            "blockTimestamp": "2022-10-08T13:42:35Z"
+        },
+        "type": "sell",
+        "from": "0xa9c326b190f12e537206480c70aba242e432e47c",
+        "to": "0x844e94fc29d39840229f6e47290cbe73f187c3b1",
+        "value": 628.039696,
+        "asset": "usdc",
+        "spot_price": 1.002625183400536,
+        "subtotal": 0,
+        "total": 0,
+        "fees": 0,
+        "category": "erc20",
+        "rawContract": {
+            "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+        },
+        "hash": "0x5844c46b9b46fb8c0449617259570266f475c5ace93bd99e00a7b86c7f09d1c0"
+    },
+    {
+        "metadata": {
+            "blockTimestamp": "2022-10-08T13:42:35Z"
+        },
+        "type": "sell",
+        "from": "0x844e94fc29d39840229f6e47290cbe73f187c3b1",
+        "to": "0xa9c326b190f12e537206480c70aba242e432e47c",
+        "value": 2900,
+        "asset": "kap",
+        "spot_price": 0.21655172413793103,
+        "subtotal": 0,
+        "total": 0,
+        "fees": 0,
+        "category": "erc20",
+        "rawContract": {
+            "address": "0x9625ce7753ace1fa1865a47aae2c5c2ce4418569"
+        },
+        "hash": "0x5844c46b9b46fb8c0449617259570266f475c5ace93bd99e00a7b86c7f09d1c0"
+    },
+    {
+        "metadata": {
+            "blockTimestamp": "2022-10-08T13:44:35Z"
+        },
+        "type": "sell",
+        "from": "0x844e94fc29d39840229f6e47290cbe73f187c3b1",
+        "to": "0xa9c326b190f12e537206480c70aba242e432e47c",
+        "value": 2836.5775602611357,
+        "asset": "kap",
+        "spot_price": 0,
+        "subtotal": 0,
+        "total": 0,
+        "fees": 0,
+        "category": "erc20",
+        "rawContract": {
+            "address": "0x9625ce7753ace1fa1865a47aae2c5c2ce4418569"
+        },
+        "hash": "0x9dcbb2ea14b774eb74d4f72991860edd1f18f3af18e70b24bca8a82d890c0a1b"
+    },
+    {
+        "metadata": {
+            "blockTimestamp": "2022-10-08T13:44:35Z"
+        },
+        "type": "sell",
+        "from": "0x844e94fc29d39840229f6e47290cbe73f187c3b1",
+        "to": "0xa9c326b190f12e537206480c70aba242e432e47c",
+        "value": 615.740762,
+        "asset": "usdc",
+        "spot_price": 1.002625183400536,
+        "subtotal": 0,
+        "total": 0,
+        "fees": 0,
+        "category": "erc20",
+        "rawContract": {
+            "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+        },
+        "hash": "0x9dcbb2ea14b774eb74d4f72991860edd1f18f3af18e70b24bca8a82d890c0a1b"
+    },
+    {
+        "metadata": {
+            "blockTimestamp": "2022-12-02T15:15:59Z"
+        },
+        "type": "sell",
+        "from": "0xa9c326b190f12e537206480c70aba242e432e47c",
+        "to": "0x844e94fc29d39840229f6e47290cbe73f187c3b1",
+        "value": 4095.839524349906,
+        "asset": "kap",
+        "spot_price": 0.10394730438895333,
+        "subtotal": 0,
+        "total": 0,
+        "fees": 0,
+        "category": "erc20",
+        "rawContract": {
+            "address": "0x9625ce7753ace1fa1865a47aae2c5c2ce4418569"
+        },
+        "hash": "0x7ab903c6aae1d2362115bd2226c63ffdd3f4cceaf96bea360e648d1aac2cf5d5"
+    },
+    {
+        "metadata": {
+            "blockTimestamp": "2022-12-02T15:15:59Z"
+        },
+        "type": "sell",
+        "from": "0xa9c326b190f12e537206480c70aba242e432e47c",
+        "to": "0x844e94fc29d39840229f6e47290cbe73f187c3b1",
+        "value": 442.7442,
+        "asset": "usdc",
+        "spot_price": 0.9998121950507391,
+        "subtotal": 0,
+        "total": 0,
+        "fees": 0,
+        "category": "erc20",
+        "rawContract": {
+            "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+        },
+        "hash": "0x7ab903c6aae1d2362115bd2226c63ffdd3f4cceaf96bea360e648d1aac2cf5d5"
+    },
+    {
+        "metadata": {
+            "blockTimestamp": "2022-12-02T15:20:59Z"
+        },
+        "type": "",
+        "from": "0x844e94fc29d39840229f6e47290cbe73f187c3b1",
+        "to": "0xdef171fe48cf0115b1d80b88dc8eab59176fee57",
+        "value": 455.043134,
+        "asset": "usdc",
+        "spot_price": 0.9998121950507391,
+        "subtotal": 0,
+        "total": 0,
+        "fees": 0,
+        "category": "erc20",
+        "rawContract": {
+            "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+        },
+        "hash": "0x32f941e8fbd659af4712cd13573b34bd2e459335a4ef4c542a622b49e3c0bcf1"
+    },
+    {
+        "metadata": {
+            "blockTimestamp": "2022-12-02T15:22:47Z"
+        },
+        "type": "",
+        "from": "0x844e94fc29d39840229f6e47290cbe73f187c3b1",
+        "to": "0x48200057593487b93311b03c845afda306a90e2a",
+        "value": 4095.839524349906,
+        "asset": "kap",
+        "spot_price": 0.10394730438895333,
+        "subtotal": 0,
+        "total": 0,
+        "fees": 0,
+        "category": "erc20",
+        "rawContract": {
+            "address": "0x9625ce7753ace1fa1865a47aae2c5c2ce4418569"
+        },
+        "hash": "0xf92fa6b8f5272874afb699b2297c032faa11a9e8110922dc2285a1e8045c865d"
+    }
+]

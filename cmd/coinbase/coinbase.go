@@ -119,7 +119,7 @@ func handleBuySell(db *gorm.DB, accountID uint, line []string) models.Transactio
 	if line[1] == "Send" {
 		// Split string
 		externalID := strings.Split(line[9], "to ")[1]
-		tx.To = models.FindAccountOrCreate(db, accountID, externalID)
+		tx.To = models.FindAccountOrCreate(db, externalID)
 	}
 
 	return tx

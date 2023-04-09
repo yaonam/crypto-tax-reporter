@@ -55,6 +55,34 @@ type ApprovedTokens struct {
 	Mapping map[string]string `json:"mapping"`
 }
 
+// Imports token transfers from eth address
+func Import(db *gorm.DB, userID uint, address string) {
+	log.Print("Loading approved tokens")
+	approvedTokens := loadApprovedTokens()
+
+	log.Print("Importing wallet")
+	alchTransfers := getTransfers(address)
+
+	log.Printf("Filtering %v transfers by approved tokens", len(alchTransfers))
+	alchTransfers.filterUnapproved(approvedTokens)
+
+	log.Print("Assigning types")
+	alchTransfers.assignTypes(db, userID)
+
+	// log.Print("Fetching spot prices")
+	// alchTransfers.getSpotPrices(approvedTokens)
+
+	log.Printf("Matching %v transfers", len(alchTransfers))
+	alchTransfers.matchTransfers(address)
+
+	log.Printf("Converting %v transfers to txs", len(alchTransfers))
+	convertToTx(db, userID, &alchTransfers, approvedTokens)
+	// txs := convertToTx(db, userID, &alchTransfers, approvedTokens)
+	// prettyTxs, _ := json.MarshalIndent(txs, "", "  ")
+	// log.Print("Transactions: ", string(prettyTxs))
+
+}
+
 func loadApprovedTokens() *ApprovedTokens {
 	file, err := os.Open("approvedTokens.json")
 	if err != nil {
@@ -73,34 +101,6 @@ func loadApprovedTokens() *ApprovedTokens {
 		log.Fatal(err)
 	}
 	return &approvedTokens
-}
-
-// Imports token transfers from eth address
-func Import(db *gorm.DB, userID uint, address string) {
-	log.Print("Loading approved tokens")
-	approvedTokens := loadApprovedTokens()
-
-	log.Print("Importing wallet")
-	alchTransfers := getTransfers(address)
-
-	log.Printf("Filtering %v transfers by approved tokens", len(alchTransfers))
-	alchTransfers.filterUnapproved(approvedTokens)
-
-	log.Print("Assigning types")
-	alchTransfers.assignTypes(db, userID)
-
-	log.Print("Fetching spot prices")
-	alchTransfers.getSpotPrices(approvedTokens)
-
-	log.Printf("Matching %v transfers", len(alchTransfers))
-	alchTransfers.matchTransfers(address)
-
-	log.Printf("Converting %v transfers to txs", len(alchTransfers))
-	convertToTx(db, userID, &alchTransfers, approvedTokens)
-	// txs := convertToTx(db, userID, &alchTransfers, approvedTokens)
-	// prettyTxs, _ := json.MarshalIndent(txs, "", "  ")
-	// log.Print("Transactions: ", string(prettyTxs))
-
 }
 
 func (s *LowercaseString) UnmarshalJSON(data []byte) error {
@@ -183,11 +183,13 @@ func (tfs *AlchemyTransfers) assignTypes(db *gorm.DB, userID uint) {
 	// Create a map of wallet addresses
 	userWallets := make(map[string]bool)
 	for _, account := range userAccounts {
+		log.Print(account.ExternalID)
 		userWallets[account.ExternalID] = true
 	}
 
 	// Iterate over transfers and assign types
-	for _, tf := range *tfs {
+	for i := range *tfs {
+		tf := &(*tfs)[i]
 		to, from := userWallets[tf.To], userWallets[tf.From]
 		if to && from {
 			tf.Type = "send"
@@ -197,6 +199,8 @@ func (tfs *AlchemyTransfers) assignTypes(db *gorm.DB, userID uint) {
 			tf.Type = "sell"
 		}
 	}
+	after, _ := json.MarshalIndent(*tfs, "", "  ")
+	log.Print(string(after))
 }
 
 // Convert AlchemyTransfer to models.Transaction
@@ -207,8 +211,8 @@ func convertToTx(db *gorm.DB, userID uint, alchTransfers *AlchemyTransfers, appr
 		tx := models.Transaction{
 			Timestamp: tf.Metadata.Timestamp.String(),
 			Type:      "send",
-			From:      models.FindAccountOrCreate(db, userID, tf.From),
-			To:        models.FindAccountOrCreate(db, userID, tf.To),
+			From:      models.FindAccountOrCreate(db, tf.From),
+			To:        models.FindAccountOrCreate(db, tf.To),
 			Asset:     models.FindAssetOrCreate(db, string(tf.Asset)),
 			Quantity:  tf.Quantity,
 			Currency:  models.FindAssetOrCreate(db, DefaultAsset),
@@ -288,10 +292,8 @@ func (tfs *AlchemyTransfers) Swap(i, j int) {
 	(*tfs)[i], (*tfs)[j] = (*tfs)[j], (*tfs)[i]
 }
 
-// Match transfers into buy/sell pairs and correct missing info.
+// Sorts and then matches transfers correct missing info.
 func (tfs *AlchemyTransfers) matchTransfers(address string) {
-	// before, _ := json.MarshalIndent(*tfs, "", "  ")
-	// log.Print(string(before))
 	sort.Sort(tfs)
 	// Iterate through them, match if same hash and to/from pair
 	var matchedTfIDs []int
@@ -306,29 +308,20 @@ func (tfs *AlchemyTransfers) matchTransfers(address string) {
 			matchedTfIDs = []int{i}
 		}
 	}
-	after, _ := json.MarshalIndent(*tfs, "", "  ")
-	log.Print(string(after))
 }
 
+// Fills in missing spot prices
 func (tfs *AlchemyTransfers) handleMatchedTfs(matchedTfIDs []int, address string) {
 	if len(matchedTfIDs) <= 1 {
 		return
 	}
-	log.Print(matchedTfIDs)
+	log.Print("Matched: ", matchedTfIDs)
 	var missingSpotPriceCount uint
 	var missingSpotPriceID uint
 	var total int
 	for _, i := range matchedTfIDs {
 		tf := (*tfs)[i]
-		// // Pair: Set from-sell, to-buy
-		// if tf.To == address {
-		// 	tf.Type = "buy"
-		// } else {
-		// 	tf.Type = "sell"
-		// }
-		// Keep track of total
 		if tf.SpotPrice == 0 {
-			log.Print(missingSpotPriceCount, missingSpotPriceID)
 			missingSpotPriceCount += 1
 			missingSpotPriceID = uint(i)
 		} else if tf.To == address {
