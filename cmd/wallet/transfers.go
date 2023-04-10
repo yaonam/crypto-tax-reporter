@@ -80,6 +80,7 @@ func (tfs *AlchemyTransfers) assignTypes(db *gorm.DB, userID uint) {
 
 // Fetch spot price from coingecko
 // TODO: Refactor to set *tf's spotprice instead of returning
+// TODO: Unless paired, set buy to spot price of 0 (income)
 func (tf *AlchemyTransfer) getSpotPrice(approvedTokens *ApprovedTokens) float64 {
 	tokenID := approvedTokens.Mapping[string(tf.Asset)]
 	date := tf.Metadata.Timestamp.Format("02-01-2006")
